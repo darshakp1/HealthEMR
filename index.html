@@ -1,0 +1,2435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mission EMR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --sand-50: #FDFBF7;
+    --sand-100: #F5F0E8;
+    --sand-200: #EAE2D4;
+    --sand-300: #D9CEBC;
+    --sand-400: #C4B5A0;
+    --sand-500: #A89880;
+    --sand-600: #8A7A65;
+    --sand-700: #6B5E4E;
+    --sand-800: #4A3F33;
+    --sand-900: #2C2419;
+
+    --teal-50: #F0FAF8;
+    --teal-100: #CCEDE8;
+    --teal-200: #99DBD1;
+    --teal-300: #5EC4B7;
+    --teal-400: #30A99B;
+    --teal-500: #1E8A7D;
+    --teal-600: #166E63;
+
+    --amber-100: #FEF3C7;
+    --amber-400: #FBBF24;
+    --amber-600: #D97706;
+
+    --red-50: #FEF2F2;
+    --red-100: #FEE2E2;
+    --red-400: #F87171;
+    --red-500: #EF4444;
+    --red-600: #DC2626;
+    --red-700: #B91C1C;
+
+    --blue-50: #EFF6FF;
+    --blue-100: #DBEAFE;
+    --blue-400: #60A5FA;
+    --blue-600: #2563EB;
+
+    --font-body: 'DM Sans', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+
+    --shadow-sm: 0 1px 3px rgba(44,36,25,0.08);
+    --shadow-md: 0 4px 12px rgba(44,36,25,0.10);
+    --shadow-lg: 0 8px 32px rgba(44,36,25,0.12);
+  }
+  html, body, #root { height: 100%; overflow: hidden; }
+  body { font-family: var(--font-body); background: var(--sand-100); color: var(--sand-900); }
+  
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--sand-300); border-radius: 99px; }
+
+  /* Animations */
+  @keyframes slideIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+  .animate-in { animation: slideIn 0.2s ease; }
+  .fade-in { animation: fadeIn 0.15s ease; }
+
+  /* Dark mode overrides */
+  body.dark-mode {
+    --sand-50: #1A1F2B;
+    --sand-100: #141920;
+    --sand-200: #1E2533;
+    --sand-300: #2A3347;
+    --sand-400: #3D4F68;
+    --sand-500: #5A7090;
+    --sand-600: #7A94B0;
+    --sand-700: #9BB3CC;
+    --sand-800: #BDD0E5;
+    --sand-900: #E2EAF4;
+    --teal-50: #0A1F1E;
+    --teal-100: #0F2E2C;
+    --teal-200: #1A4A47;
+    --teal-300: #2A7A72;
+    --teal-400: #30A99B;
+    --teal-500: #5EC4B7;
+    --teal-600: #8DD8CE;
+    --red-50: #1F0A0A;
+    --red-100: #2E1010;
+    --red-400: #F87171;
+    --red-500: #EF4444;
+    --red-700: #FCA5A5;
+    --amber-100: #2A1F00;
+    --amber-400: #FBBF24;
+    --amber-600: #FCD34D;
+    background: #141920;
+    color: #E2EAF4;
+  }
+  body.dark-mode ::-webkit-scrollbar-thumb { background: #2A3347; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+// ─── TWEAKS PANEL ─────────────────────────────────────────────────────────────
+const __TWEAKS_STYLE = `
+  .twk-panel{position:fixed;right:16px;bottom:16px;z-index:2147483646;width:280px;
+    max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+    transform:scale(var(--dc-inv-zoom,1));transform-origin:bottom right;
+    background:rgba(250,249,247,.78);color:#29261b;
+    -webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);
+    border:.5px solid rgba(255,255,255,.6);border-radius:14px;
+    box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 12px 40px rgba(0,0,0,.18);
+    font:11.5px/1.4 ui-sans-serif,system-ui,-apple-system,sans-serif;overflow:hidden}
+  .twk-hd{display:flex;align-items:center;justify-content:space-between;
+    padding:10px 8px 10px 14px;cursor:move;user-select:none}
+  .twk-hd b{font-size:12px;font-weight:600;letter-spacing:.01em}
+  .twk-x{appearance:none;border:0;background:transparent;color:rgba(41,38,27,.55);
+    width:22px;height:22px;border-radius:6px;cursor:default;font-size:13px;line-height:1}
+  .twk-x:hover{background:rgba(0,0,0,.06);color:#29261b}
+  .twk-body{padding:2px 14px 14px;display:flex;flex-direction:column;gap:10px;
+    overflow-y:auto;overflow-x:hidden;min-height:0;
+    scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.15) transparent}
+  .twk-body::-webkit-scrollbar{width:8px}
+  .twk-body::-webkit-scrollbar-track{background:transparent;margin:2px}
+  .twk-body::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border-radius:4px;
+    border:2px solid transparent;background-clip:content-box}
+  .twk-body::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.25);
+    border:2px solid transparent;background-clip:content-box}
+  .twk-row{display:flex;flex-direction:column;gap:5px}
+  .twk-row-h{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
+  .twk-lbl{display:flex;justify-content:space-between;align-items:baseline;
+    color:rgba(41,38,27,.72)}
+  .twk-lbl>span:first-child{font-weight:500}
+  .twk-val{color:rgba(41,38,27,.5);font-variant-numeric:tabular-nums}
+
+  .twk-sect{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+    color:rgba(41,38,27,.45);padding:10px 0 0}
+  .twk-sect:first-child{padding-top:0}
+
+  .twk-field{appearance:none;width:100%;height:26px;padding:0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;
+    background:rgba(255,255,255,.6);color:inherit;font:inherit;outline:none}
+  .twk-field:focus{border-color:rgba(0,0,0,.25);background:rgba(255,255,255,.85)}
+  select.twk-field{padding-right:22px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='rgba(0,0,0,.5)' d='M0 0h10L5 6z'/></svg>");
+    background-repeat:no-repeat;background-position:right 8px center}
+
+  .twk-slider{appearance:none;-webkit-appearance:none;width:100%;height:4px;margin:6px 0;
+    border-radius:999px;background:rgba(0,0,0,.12);outline:none}
+  .twk-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:14px;height:14px;border-radius:50%;background:#fff;
+    border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+  .twk-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;
+    background:#fff;border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+
+  .twk-seg{position:relative;display:flex;padding:2px;border-radius:8px;
+    background:rgba(0,0,0,.06);user-select:none}
+  .twk-seg-thumb{position:absolute;top:2px;bottom:2px;border-radius:6px;
+    background:rgba(255,255,255,.9);box-shadow:0 1px 2px rgba(0,0,0,.12);
+    transition:left .15s cubic-bezier(.3,.7,.4,1),width .15s}
+  .twk-seg.dragging .twk-seg-thumb{transition:none}
+  .twk-seg button{appearance:none;position:relative;z-index:1;flex:1;border:0;
+    background:transparent;color:inherit;font:inherit;font-weight:500;min-height:22px;
+    border-radius:6px;cursor:default;padding:4px 6px;line-height:1.2;
+    overflow-wrap:anywhere}
+
+  .twk-toggle{position:relative;width:32px;height:18px;border:0;border-radius:999px;
+    background:rgba(0,0,0,.15);transition:background .15s;cursor:default;padding:0}
+  .twk-toggle[data-on="1"]{background:#34c759}
+  .twk-toggle i{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+  .twk-toggle[data-on="1"] i{transform:translateX(14px)}
+
+  .twk-num{display:flex;align-items:center;height:26px;padding:0 0 0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;background:rgba(255,255,255,.6)}
+  .twk-num-lbl{font-weight:500;color:rgba(41,38,27,.6);cursor:ew-resize;
+    user-select:none;padding-right:8px}
+  .twk-num input{flex:1;min-width:0;height:100%;border:0;background:transparent;
+    font:inherit;font-variant-numeric:tabular-nums;text-align:right;padding:0 8px 0 0;
+    outline:none;color:inherit;-moz-appearance:textfield}
+  .twk-num input::-webkit-inner-spin-button,.twk-num input::-webkit-outer-spin-button{
+    -webkit-appearance:none;margin:0}
+  .twk-num-unit{padding-right:8px;color:rgba(41,38,27,.45)}
+
+  .twk-btn{appearance:none;height:26px;padding:0 12px;border:0;border-radius:7px;
+    background:rgba(0,0,0,.78);color:#fff;font:inherit;font-weight:500;cursor:default}
+  .twk-btn:hover{background:rgba(0,0,0,.88)}
+  .twk-btn.secondary{background:rgba(0,0,0,.06);color:inherit}
+  .twk-btn.secondary:hover{background:rgba(0,0,0,.1)}
+
+  .twk-swatch{appearance:none;-webkit-appearance:none;width:56px;height:22px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:6px;padding:0;cursor:default;
+    background:transparent;flex-shrink:0}
+  .twk-swatch::-webkit-color-swatch-wrapper{padding:0}
+  .twk-swatch::-webkit-color-swatch{border:0;border-radius:5.5px}
+  .twk-swatch::-moz-color-swatch{border:0;border-radius:5.5px}
+`;
+
+const TweaksCtx = React.createContext(null);
+
+function useTweaks(defaults) {
+  const [tweaks, setValues] = React.useState(defaults);
+  const setTweak = React.useCallback((key, val) => {
+    setValues(prev => ({ ...prev, [key]: val }));
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { [key]: val } }, '*');
+  }, []);
+  return { tweaks, setTweak };
+}
+
+function TweaksPanel({ tweaks, setTweak, title = 'Tweaks', children }) {
+  const [open, setOpen] = React.useState(false);
+  const dragRef = React.useRef(null);
+  const offsetRef = React.useRef({ x: 16, y: 16 });
+  const PAD = 16;
+
+  const clampToViewport = React.useCallback(() => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const w = panel.offsetWidth, h = panel.offsetHeight;
+    const maxRight = Math.max(PAD, window.innerWidth - w - PAD);
+    const maxBottom = Math.max(PAD, window.innerHeight - h - PAD);
+    offsetRef.current = {
+      x: Math.min(maxRight, Math.max(PAD, offsetRef.current.x)),
+      y: Math.min(maxBottom, Math.max(PAD, offsetRef.current.y)),
+    };
+    panel.style.right = offsetRef.current.x + 'px';
+    panel.style.bottom = offsetRef.current.y + 'px';
+  }, []);
+
+  React.useEffect(() => {
+    if (!open) return;
+    clampToViewport();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', clampToViewport);
+      return () => window.removeEventListener('resize', clampToViewport);
+    }
+    const ro = new ResizeObserver(clampToViewport);
+    ro.observe(document.documentElement);
+    return () => ro.disconnect();
+  }, [open, clampToViewport]);
+
+  React.useEffect(() => {
+    const onMsg = (e) => {
+      const t = e?.data?.type;
+      if (t === '__activate_edit_mode') setOpen(true);
+      else if (t === '__deactivate_edit_mode') setOpen(false);
+    };
+    window.addEventListener('message', onMsg);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  const dismiss = () => {
+    setOpen(false);
+    window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*');
+  };
+
+  const onDragStart = (e) => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const r = panel.getBoundingClientRect();
+    const sx = e.clientX, sy = e.clientY;
+    const startRight = window.innerWidth - r.right;
+    const startBottom = window.innerHeight - r.bottom;
+    const move = (ev) => {
+      offsetRef.current = {
+        x: startRight - (ev.clientX - sx),
+        y: startBottom - (ev.clientY - sy),
+      };
+      clampToViewport();
+    };
+    const up = () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  };
+
+  if (!open) return null;
+  return (
+    <TweaksCtx.Provider value={{ tweaks, setTweak }}>
+      <style>{__TWEAKS_STYLE}</style>
+      <div ref={dragRef} className="twk-panel" data-noncommentable=""
+           style={{ right: offsetRef.current.x, bottom: offsetRef.current.y }}>
+        <div className="twk-hd" onMouseDown={onDragStart}>
+          <b>{title}</b>
+          <button className="twk-x" aria-label="Close tweaks"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={dismiss}>✕</button>
+        </div>
+        <div className="twk-body">{children}</div>
+      </div>
+    </TweaksCtx.Provider>
+  );
+}
+
+function TweakSection({ title, children }) {
+  return (
+    <>
+      <div className="twk-sect">{title}</div>
+      {children}
+    </>
+  );
+}
+
+function TweakRow({ label, value, children, inline = false }) {
+  return (
+    <div className={inline ? 'twk-row twk-row-h' : 'twk-row'}>
+      <div className="twk-lbl">
+        <span>{label}</span>
+        {value != null && <span className="twk-val">{value}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function TweakToggle({ id, label }) {
+  const { tweaks, setTweak } = React.useContext(TweaksCtx);
+  const value = tweaks[id];
+  return (
+    <div className="twk-row twk-row-h">
+      <div className="twk-lbl"><span>{label}</span></div>
+      <button type="button" className="twk-toggle" data-on={value ? '1' : '0'}
+              role="switch" aria-checked={!!value}
+              onClick={() => setTweak(id, !value)}><i /></button>
+    </div>
+  );
+}
+
+function TweakRadio({ id, label, options }) {
+  const { tweaks, setTweak } = React.useContext(TweaksCtx);
+  const value = tweaks[id];
+  const trackRef = React.useRef(null);
+  const [dragging, setDragging] = React.useState(false);
+  const opts = options.map((o) => (typeof o === 'object' ? o : { value: o, label: o }));
+  const idx = Math.max(0, opts.findIndex((o) => o.value === value));
+  const n = opts.length;
+  const valueRef = React.useRef(value);
+  valueRef.current = value;
+
+  const segAt = (clientX) => {
+    const r = trackRef.current.getBoundingClientRect();
+    const inner = r.width - 4;
+    const i = Math.floor(((clientX - r.left - 2) / inner) * n);
+    return opts[Math.max(0, Math.min(n - 1, i))].value;
+  };
+
+  const onPointerDown = (e) => {
+    setDragging(true);
+    const v0 = segAt(e.clientX);
+    if (v0 !== valueRef.current) setTweak(id, v0);
+    const move = (ev) => {
+      if (!trackRef.current) return;
+      const v = segAt(ev.clientX);
+      if (v !== valueRef.current) setTweak(id, v);
+    };
+    const up = () => {
+      setDragging(false);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+
+  return (
+    <TweakRow label={label}>
+      <div ref={trackRef} role="radiogroup" onPointerDown={onPointerDown}
+           className={dragging ? 'twk-seg dragging' : 'twk-seg'}>
+        <div className="twk-seg-thumb"
+             style={{ left: `calc(2px + ${idx} * (100% - 4px) / ${n})`,
+                      width: `calc((100% - 4px) / ${n})` }} />
+        {opts.map((o) => (
+          <button key={o.value} type="button" role="radio" aria-checked={o.value === value}>
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </TweakRow>
+  );
+}
+
+function TweakButton({ label, onClick, secondary = false }) {
+  return (
+    <button type="button" className={secondary ? 'twk-btn secondary' : 'twk-btn'}
+            onClick={onClick}>{label}</button>
+  );
+}
+
+// ─── END TWEAKS PANEL ─────────────────────────────────────────────────────────
+
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ─── DESIGN TOKENS ────────────────────────────────────────────────────────────
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "warm",
+  "density": "comfortable",
+  "queueStyle": "hybrid",
+  "accentColor": "#1E8A7D",
+  "darkMode": false
+}/*EDITMODE-END*/;
+
+// ─── SEED DATA ────────────────────────────────────────────────────────────────
+const SEED_PATIENTS = [
+  {
+    id: "P001", firstName: "Maria", lastName: "Santos", dob: "1978-03-12",
+    gender: "Female", phone: "555-0142", email: "maria.santos@example.com",
+    location: "Clinic A", photo: null,
+    allergies: ["Penicillin", "Sulfa drugs"],
+    visits: [
+      {
+        id: "V001-old", date: "2024-11-15", provider: "Dr. Chen", pharmacist: "J. Rivera",
+        vitals: { bp: "128/82", hr: 76, rr: 16, temp: "98.6°F", weight: "62kg", height: "162cm", spo2: 98 },
+        soapp: {
+          subjective: "Patient presents with persistent cough x 2 weeks. Reports productive cough, low-grade fever. No hemoptysis.",
+          objective: "Mild wheezing bilaterally. Throat mildly erythematous. Temp 99.1°F.",
+          assessment: "Acute bronchitis, likely viral",
+          plan: "Supportive care. Increased fluids. Return if worsening.",
+          procedures: "None"
+        },
+        administered: [{ name: "Albuterol", dose: "2.5mg", route: "Nebulized", time: "10:30 AM" }],
+        prescriptions: [{ name: "Azithromycin", dose: "500mg", route: "Oral", sig: "Once daily x 5 days", status: "Filled", qty: 5 }]
+      }
+    ]
+  },
+  {
+    id: "P002", firstName: "Carlos", lastName: "Mendez", dob: "1965-07-22",
+    gender: "Male", phone: "555-0287", email: "cmendez@example.com",
+    location: "Clinic A", photo: null,
+    allergies: [],
+    visits: []
+  },
+  {
+    id: "P003", firstName: "Ana", lastName: "Reyes", dob: "1990-01-08",
+    gender: "Female", phone: "555-0399", email: "",
+    location: "Clinic B", photo: null,
+    allergies: ["Aspirin", "NSAIDs"],
+    visits: [
+      {
+        id: "V003-old", date: "2024-08-03", provider: "Dr. Patel", pharmacist: "S. Kim",
+        vitals: { bp: "118/76", hr: 68, rr: 14, temp: "98.2°F", weight: "55kg", height: "158cm", spo2: 99 },
+        soapp: {
+          subjective: "Headache and joint pain for 3 days.",
+          objective: "No focal neuro deficits. Joints mildly tender.",
+          assessment: "Viral syndrome",
+          plan: "Rest, hydration. Avoid NSAIDs and aspirin.",
+          procedures: "None"
+        },
+        administered: [],
+        prescriptions: [{ name: "Acetaminophen", dose: "500mg", route: "Oral", sig: "Q6H PRN pain", status: "Filled", qty: 20 }]
+      }
+    ]
+  }
+];
+
+const SEED_TRIP = {
+  id: "T001", name: "Guatemala Mission — May 2026",
+  location: "Clinic A", dates: "May 1–7, 2026",
+  volunteers: [
+    { id: "U001", name: "Dr. Sarah Chen", role: "Provider", email: "schen@org.org" },
+    { id: "U002", name: "Nurse James Rivera", role: "Triage", email: "jrivera@org.org" },
+    { id: "U003", name: "Dr. Priya Patel", role: "Provider", email: "ppatel@org.org" },
+    { id: "U004", name: "Maria Flores", role: "Pharmacy", email: "mflores@org.org" },
+    { id: "U005", name: "Tom Wright", role: "Triage", email: "twright@org.org" },
+  ]
+};
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+function calcAge(dob) {
+  const d = new Date(dob), now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  if (now < new Date(now.getFullYear(), d.getMonth(), d.getDate())) age--;
+  return age;
+}
+function formatTime(d = new Date()) {
+  return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+}
+function formatDate(d = new Date()) {
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function minutesAgo(ts) {
+  const diff = Math.floor((Date.now() - ts) / 60000);
+  if (diff < 1) return 'just now';
+  if (diff === 1) return '1 min ago';
+  return `${diff} min ago`;
+}
+
+// ─── SHARED UI COMPONENTS ─────────────────────────────────────────────────────
+function Badge({ color = 'sand', children, size = 'sm' }) {
+  const colors = {
+    sand: { bg: '#EAE2D4', text: '#4A3F33' },
+    teal: { bg: '#CCEDE8', text: '#166E63' },
+    amber: { bg: '#FEF3C7', text: '#92400E' },
+    red: { bg: '#FEE2E2', text: '#B91C1C' },
+    blue: { bg: '#DBEAFE', text: '#1D4ED8' },
+    green: { bg: '#D1FAE5', text: '#065F46' },
+  };
+  const c = colors[color] || colors.sand;
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      background: c.bg, color: c.text,
+      padding: size === 'sm' ? '2px 8px' : '4px 10px',
+      borderRadius: 99, fontSize: size === 'sm' ? 11 : 12,
+      fontWeight: 500, whiteSpace: 'nowrap'
+    }}>{children}</span>
+  );
+}
+
+function Button({ onClick, variant = 'primary', size = 'md', disabled, children, style }) {
+  const base = {
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+    fontFamily: 'var(--font-body)', fontWeight: 500, cursor: disabled ? 'not-allowed' : 'pointer',
+    border: 'none', borderRadius: 'var(--radius-md)', transition: 'all 0.15s',
+    opacity: disabled ? 0.5 : 1,
+    fontSize: size === 'sm' ? 13 : size === 'lg' ? 15 : 14,
+    padding: size === 'sm' ? '6px 14px' : size === 'lg' ? '12px 24px' : '9px 18px',
+  };
+  const variants = {
+    primary: { background: '#1E8A7D', color: '#fff' },
+    secondary: { background: 'var(--sand-200)', color: 'var(--sand-800)' },
+    danger: { background: 'var(--red-500)', color: '#fff' },
+    ghost: { background: 'transparent', color: 'var(--sand-700)' },
+    outline: { background: 'transparent', color: '#1E8A7D', border: '1.5px solid #1E8A7D' },
+  };
+  return (
+    <button onClick={disabled ? undefined : onClick}
+      style={{ ...base, ...variants[variant], ...style }}>
+      {children}
+    </button>
+  );
+}
+
+function Input({ label, value, onChange, type = 'text', placeholder, required, hint, error, unit, unitOptions, onUnitChange }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      {label && <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--sand-700)', letterSpacing: '0.02em' }}>
+        {label} {required && <span style={{ color: 'var(--red-500)' }}>*</span>}
+      </label>}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+        <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+          style={{
+            flex: 1, padding: '8px 12px', borderRadius: unit ? 'var(--radius-sm) 0 0 var(--radius-sm)' : 'var(--radius-sm)',
+            border: `1.5px solid ${error ? 'var(--red-400)' : 'var(--sand-300)'}`,
+            fontSize: 14, fontFamily: 'var(--font-body)', color: 'var(--sand-900)',
+            background: '#fff', outline: 'none', width: '100%'
+          }} />
+        {unit && (
+          <div style={{
+            padding: '8px 12px', background: 'var(--sand-100)', borderRadius: '0 var(--radius-sm) var(--radius-sm) 0',
+            border: '1.5px solid var(--sand-300)', borderLeft: 'none', fontSize: 13, color: 'var(--sand-600)',
+            cursor: unitOptions ? 'pointer' : 'default', userSelect: 'none'
+          }} onClick={() => {
+            if (unitOptions && onUnitChange) {
+              const idx = unitOptions.indexOf(unit);
+              onUnitChange(unitOptions[(idx + 1) % unitOptions.length]);
+            }
+          }}>{unit} {unitOptions && '⇄'}</div>
+        )}
+      </div>
+      {hint && !error && <span style={{ fontSize: 11, color: 'var(--sand-500)' }}>{hint}</span>}
+      {error && <span style={{ fontSize: 11, color: 'var(--red-500)' }}>{error}</span>}
+    </div>
+  );
+}
+
+function Select({ label, value, onChange, options, required }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      {label && <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--sand-700)', letterSpacing: '0.02em' }}>
+        {label} {required && <span style={{ color: 'var(--red-500)' }}>*</span>}
+      </label>}
+      <select value={value} onChange={e => onChange(e.target.value)} style={{
+        padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--sand-300)',
+        fontSize: 14, fontFamily: 'var(--font-body)', color: 'var(--sand-900)', background: '#fff',
+        outline: 'none', appearance: 'none',
+        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%236B5E4E' stroke-width='1.5' fill='none'/%3E%3C/svg%3E")`,
+        backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', paddingRight: 32
+      }}>
+        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+    </div>
+  );
+}
+
+function Textarea({ label, value, onChange, placeholder, rows = 4, required }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      {label && <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--sand-700)', letterSpacing: '0.02em' }}>
+        {label} {required && <span style={{ color: 'var(--red-500)' }}>*</span>}
+      </label>}
+      <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={rows}
+        style={{
+          padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--sand-300)',
+          fontSize: 14, fontFamily: 'var(--font-body)', color: 'var(--sand-900)',
+          background: '#fff', outline: 'none', resize: 'vertical', lineHeight: 1.5
+        }} />
+    </div>
+  );
+}
+
+function AllergyBanner({ allergies }) {
+  if (!allergies || allergies.length === 0) return null;
+  return (
+    <div style={{
+      background: 'var(--red-50)', border: '1.5px solid var(--red-400)', borderRadius: 'var(--radius-md)',
+      padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10
+    }}>
+      <span style={{ fontSize: 18 }}>⚠️</span>
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--red-700)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+          Known Allergies
+        </div>
+        <div style={{ fontSize: 13, color: 'var(--red-700)', fontWeight: 500 }}>
+          {allergies.join(' · ')}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PhotoPlaceholder({ name, size = 40 }) {
+  const initials = name ? name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : '?';
+  const colors = ['#5EC4B7', '#30A99B', '#1E8A7D', '#8A7A65', '#A89880'];
+  const idx = name ? name.charCodeAt(0) % colors.length : 0;
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: '50%', background: colors[idx],
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      color: '#fff', fontWeight: 600, fontSize: size * 0.35, flexShrink: 0
+    }}>{initials}</div>
+  );
+}
+
+function Card({ children, style, onClick }) {
+  return (
+    <div onClick={onClick}
+      style={{
+        background: '#fff', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)',
+        border: '1px solid var(--sand-200)', overflow: 'hidden',
+        cursor: onClick ? 'pointer' : 'default', transition: 'box-shadow 0.15s',
+        ...style
+      }}
+      onMouseEnter={onClick ? e => e.currentTarget.style.boxShadow = 'var(--shadow-md)' : undefined}
+      onMouseLeave={onClick ? e => e.currentTarget.style.boxShadow = 'var(--shadow-sm)' : undefined}
+    >{children}</div>
+  );
+}
+
+function SectionHeader({ title, count, action }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--sand-800)' }}>{title}</h3>
+        {count !== undefined && (
+          <span style={{ background: 'var(--teal-100)', color: 'var(--teal-600)', borderRadius: 99, padding: '1px 8px', fontSize: 12, fontWeight: 600 }}>
+            {count}
+          </span>
+        )}
+      </div>
+      {action}
+    </div>
+  );
+}
+
+function VitalFlag({ value, warn }) {
+  if (!warn) return null;
+  return <span style={{ color: 'var(--amber-600)', fontSize: 11 }}>⚠</span>;
+}
+
+// ─── SIDEBAR NAV ──────────────────────────────────────────────────────────────
+const ROLE_CONFIG = {
+  Triage: { icon: '🏥', label: 'Triage', color: '#1E8A7D' },
+  Provider: { icon: '👨‍⚕️', label: 'Provider', color: '#1E8A7D' },
+  Pharmacy: { icon: '💊', label: 'Pharmacy', color: '#1E8A7D' },
+  Manager: { icon: '📋', label: 'Manager', color: '#1E8A7D' },
+};
+
+function Sidebar({ role, setRole, activeView, setView, trip, notifications, darkMode, onToggleDark }) {
+  const roles = ['Triage', 'Provider', 'Pharmacy', 'Manager'];
+  const navItems = {
+    Triage: [{ id: 'search', label: 'Patient Search', icon: '🔍' }, { id: 'checkins', label: 'Checked In Today', icon: '📋' }],
+    Provider: [{ id: 'queue', label: 'Care Queue', icon: '👥' }, { id: 'completed', label: 'Completed', icon: '✓' }],
+    Pharmacy: [{ id: 'queue', label: 'Pharmacy Queue', icon: '💊' }, { id: 'completed', label: 'Completed', icon: '✓' }],
+    Manager: [{ id: 'overview', label: 'Overview', icon: '⚡' }, { id: 'trip', label: 'Trip Config', icon: '🗺' }, { id: 'roster', label: 'Volunteer Roster', icon: '👥' }],
+  };
+
+  return (
+    <div style={{
+      width: 220, background: 'var(--sand-900)', display: 'flex', flexDirection: 'column',
+      height: '100%', flexShrink: 0
+    }}>
+      {/* Logo */}
+      <div style={{ padding: '20px 18px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ fontSize: 18, fontWeight: 600, color: '#fff', letterSpacing: '-0.02em' }}>
+          Mission<span style={{ color: '#5EC4B7' }}>EMR</span>
+        </div>
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{trip.name}</div>
+      </div>
+
+      {/* Role Switcher */}
+      <div style={{ padding: '12px 12px 8px' }}>
+        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6, paddingLeft: 6 }}>
+          Role
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {roles.map(r => (
+            <button key={r} onClick={() => { setRole(r); setView(navItems[r][0].id); }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px',
+                borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer', textAlign: 'left',
+                background: role === r ? 'rgba(94,196,183,0.18)' : 'transparent',
+                color: role === r ? '#5EC4B7' : 'rgba(255,255,255,0.55)',
+                fontSize: 13, fontWeight: role === r ? 600 : 400, fontFamily: 'var(--font-body)',
+                transition: 'all 0.12s'
+              }}>
+              <span>{ROLE_CONFIG[r].icon}</span>
+              <span>{r}</span>
+              {role === r && <span style={{ marginLeft: 'auto', width: 6, height: 6, borderRadius: '50%', background: '#5EC4B7' }}></span>}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', margin: '4px 12px' }}></div>
+
+      {/* Nav Items */}
+      <div style={{ padding: '8px 12px', flex: 1 }}>
+        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6, paddingLeft: 6 }}>
+          Navigation
+        </div>
+        {(navItems[role] || []).map(item => (
+          <button key={item.id} onClick={() => setView(item.id)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', width: '100%',
+              borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer', textAlign: 'left',
+              background: activeView === item.id ? 'rgba(255,255,255,0.1)' : 'transparent',
+              color: activeView === item.id ? '#fff' : 'rgba(255,255,255,0.55)',
+              fontSize: 13, fontFamily: 'var(--font-body)', marginBottom: 2,
+              transition: 'all 0.12s'
+            }}>
+            <span style={{ fontSize: 15 }}>{item.icon}</span>
+            <span>{item.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Notifications */}
+      {notifications.length > 0 && (
+        <div style={{ padding: '8px 12px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6, paddingLeft: 6 }}>
+            Alerts
+          </div>
+          {notifications.map((n, i) => (
+            <div key={i} style={{
+              padding: '8px 10px', background: 'rgba(251,191,36,0.15)', borderRadius: 'var(--radius-sm)',
+              marginBottom: 4, fontSize: 12, color: '#FCD34D', borderLeft: '2px solid #FBBF24'
+            }}>
+              {n.message}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Dark mode toggle */}
+      <div style={{ padding: '8px 14px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Dark Mode</span>
+        <button onClick={onToggleDark} style={{
+          width: 36, height: 20, borderRadius: 99, border: 'none', cursor: 'pointer', position: 'relative',
+          background: darkMode ? '#5EC4B7' : 'rgba(255,255,255,0.15)', transition: 'background 0.2s'
+        }}>
+          <div style={{
+            position: 'absolute', top: 2, left: darkMode ? 18 : 2,
+            width: 16, height: 16, borderRadius: '50%', background: '#fff',
+            transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
+          }}></div>
+        </button>
+      </div>
+      {/* User */}
+      <div style={{ padding: '12px 14px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#5EC4B7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, color: '#fff' }}>
+          {role === 'Triage' ? 'JR' : role === 'Provider' ? 'SC' : role === 'Pharmacy' ? 'MF' : 'TW'}
+        </div>
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.85)' }}>
+            {role === 'Triage' ? 'J. Rivera' : role === 'Provider' ? 'Dr. Chen' : role === 'Pharmacy' ? 'M. Flores' : 'T. Wright'}
+          </div>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{role}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── TRIAGE VIEWS ─────────────────────────────────────────────────────────────
+function TriageSearch({ patients, onCheckIn, onNewPatient }) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState(null);
+  const [searched, setSearched] = useState(false);
+
+  const search = () => {
+    if (!query.trim()) return;
+    const q = query.toLowerCase();
+    const found = patients.filter(p =>
+      `${p.firstName} ${p.lastName}`.toLowerCase().includes(q) ||
+      p.phone.includes(q) || p.id.toLowerCase().includes(q)
+    );
+    setResults(found);
+    setSearched(true);
+  };
+
+  return (
+    <div style={{ maxWidth: 680, margin: '0 auto', padding: '32px 24px' }}>
+      <div style={{ marginBottom: 32 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 600, color: 'var(--sand-900)', marginBottom: 4 }}>Patient Search</h1>
+        <p style={{ fontSize: 14, color: 'var(--sand-600)' }}>Search by name, phone number, or patient ID</p>
+      </div>
+
+      <Card style={{ padding: '24px', marginBottom: 24 }}>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <input
+            value={query} onChange={e => setQuery(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && search()}
+            placeholder="Search patients..."
+            style={{
+              flex: 1, padding: '12px 16px', borderRadius: 'var(--radius-md)',
+              border: '1.5px solid var(--sand-300)', fontSize: 15,
+              fontFamily: 'var(--font-body)', outline: 'none', color: 'var(--sand-900)'
+            }} />
+          <Button onClick={search} size="lg">Search</Button>
+        </div>
+      </Card>
+
+      {searched && (
+        <div className="animate-in">
+          {results.length === 0 ? (
+            <Card style={{ padding: '32px', textAlign: 'center' }}>
+              <div style={{ fontSize: 32, marginBottom: 12 }}>🔍</div>
+              <div style={{ fontSize: 16, fontWeight: 500, color: 'var(--sand-800)', marginBottom: 8 }}>No patients found</div>
+              <div style={{ fontSize: 14, color: 'var(--sand-500)', marginBottom: 20 }}>No records match "{query}"</div>
+              <Button onClick={onNewPatient}>Register New Patient</Button>
+            </Card>
+          ) : (
+            <div>
+              <SectionHeader title="Results" count={results.length} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {results.map(p => (
+                  <PatientSearchCard key={p.id} patient={p} onSelect={() => onCheckIn(p)} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!searched && (
+        <div style={{ textAlign: 'center', padding: '32px 0' }}>
+          <Button variant="outline" onClick={onNewPatient}>+ Register New Patient</Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PatientSearchCard({ patient, onSelect }) {
+  const age = calcAge(patient.dob);
+  const lastVisit = patient.visits.length > 0 ? patient.visits[patient.visits.length - 1].date : null;
+
+  return (
+    <Card onClick={onSelect} style={{ padding: '16px 20px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <PhotoPlaceholder name={`${patient.firstName} ${patient.lastName}`} size={48} />
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <span style={{ fontSize: 15, fontWeight: 600 }}>{patient.firstName} {patient.lastName}</span>
+            {patient.allergies.length > 0 && <Badge color="red">⚠ Allergies</Badge>}
+            {patient.visits.length > 0 && <Badge color="teal">Returning</Badge>}
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--sand-600)', display: 'flex', gap: 16 }}>
+            <span>DOB: {patient.dob} · {age}y</span>
+            <span>📱 {patient.phone}</span>
+            {lastVisit && <span>Last visit: {lastVisit}</span>}
+          </div>
+        </div>
+        <div style={{ color: 'var(--teal-500)', fontSize: 18 }}>→</div>
+      </div>
+    </Card>
+  );
+}
+
+function NewPatientForm({ onComplete }) {
+  const [form, setForm] = useState({
+    firstName: '', lastName: '', dob: '', gender: '', phone: '', email: '', location: 'Clinic A'
+  });
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const submit = () => {
+    if (!form.firstName || !form.lastName || !form.dob || !form.phone) {
+      alert('Please fill in all required fields.');
+      return;
+    }
+    onComplete({
+      id: 'P' + Date.now(),
+      ...form, photo: null, allergies: [], visits: []
+    });
+  };
+
+  return (
+    <div style={{ maxWidth: 600, margin: '0 auto', padding: '32px 24px' }}>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--sand-900)', marginBottom: 4 }}>New Patient</h1>
+        <p style={{ fontSize: 14, color: 'var(--sand-600)' }}>All fields marked * are required</p>
+      </div>
+
+      <Card style={{ padding: '24px', marginBottom: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <Input label="First Name" value={form.firstName} onChange={v => set('firstName', v)} required />
+          <Input label="Last Name" value={form.lastName} onChange={v => set('lastName', v)} required />
+          <Input label="Date of Birth" value={form.dob} onChange={v => set('dob', v)} type="date" required />
+          <Select label="Gender" value={form.gender} onChange={v => set('gender', v)} required options={[
+            { value: '', label: 'Select...' },
+            { value: 'Male', label: 'Male' },
+            { value: 'Female', label: 'Female' },
+            { value: 'Non-binary', label: 'Non-binary' },
+            { value: 'Prefer not to say', label: 'Prefer not to say' },
+            { value: 'Other', label: 'Other' },
+          ]} />
+          <Input label="Phone Number" value={form.phone} onChange={v => set('phone', v)} required />
+          <Input label="Email" value={form.email} onChange={v => set('email', v)} hint="For visit summary" />
+          <Input label="Clinic Site" value={form.location} onChange={v => set('location', v)} required />
+        </div>
+      </Card>
+
+      <Card style={{ padding: '24px', marginBottom: 20 }}>
+        <div style={{ marginBottom: 12, fontSize: 13, fontWeight: 600, color: 'var(--sand-700)' }}>
+          Patient Photo <span style={{ color: 'var(--red-500)' }}>*</span>
+        </div>
+        <div style={{
+          border: '2px dashed var(--sand-300)', borderRadius: 'var(--radius-md)', padding: '32px',
+          textAlign: 'center', color: 'var(--sand-500)', cursor: 'pointer'
+        }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>📷</div>
+          <div style={{ fontSize: 14, marginBottom: 4 }}>Take photo or upload</div>
+          <div style={{ fontSize: 12 }}>Center patient's face, neutral expression, adequate lighting</div>
+          <Button variant="secondary" size="sm" style={{ marginTop: 12 }}>Choose Photo</Button>
+        </div>
+      </Card>
+
+      <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+        <Button variant="secondary" onClick={() => onComplete(null)}>Cancel</Button>
+        <Button onClick={submit}>Continue to Vitals →</Button>
+      </div>
+    </div>
+  );
+}
+
+function VitalsForm({ patient, onComplete }) {
+  const isReturning = patient.visits.length > 0;
+  const [vitals, setVitals] = useState({
+    bpSys: '', bpDia: '', hr: '', rr: '', temp: '', weight: '', height: '', spo2: '',
+    chiefComplaint: ''
+  });
+  const [allergies, setAllergies] = useState(patient.allergies.join(', '));
+  const [allergyConfirmed, setAllergyConfirmed] = useState(false);
+  const [tempUnit, setTempUnit] = useState('°F');
+  const [weightUnit, setWeightUnit] = useState('kg');
+  const [heightUnit, setHeightUnit] = useState('cm');
+
+  const setV = (k, v) => setVitals(vit => ({ ...vit, [k]: v }));
+
+  const warnings = [];
+  if (vitals.spo2 && parseFloat(vitals.spo2) < 90) warnings.push('SpO₂ below 90% — verify reading');
+  if (vitals.hr && (parseInt(vitals.hr) > 120 || parseInt(vitals.hr) < 40)) warnings.push('Heart rate outside normal range');
+  if (vitals.bpSys && parseInt(vitals.bpSys) > 180) warnings.push('Systolic BP critically elevated');
+
+  const submit = () => {
+    if (!vitals.chiefComplaint) { alert('Chief complaint is required.'); return; }
+    if (isReturning && !allergyConfirmed && patient.allergies.length > 0) {
+      alert('Please confirm allergies before check-in.'); return;
+    }
+    onComplete({
+      vitals: { ...vitals, tempUnit, weightUnit, heightUnit },
+      allergies: allergies.split(',').map(a => a.trim()).filter(Boolean),
+      chiefComplaint: vitals.chiefComplaint,
+      checkInTime: Date.now()
+    });
+  };
+
+  return (
+    <div style={{ maxWidth: 680, margin: '0 auto', padding: '32px 24px' }}>
+      {/* Patient header */}
+      <Card style={{ padding: '16px 20px', marginBottom: 20, background: 'var(--sand-50)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <PhotoPlaceholder name={`${patient.firstName} ${patient.lastName}`} size={48} />
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 600 }}>{patient.firstName} {patient.lastName}</div>
+            <div style={{ fontSize: 13, color: 'var(--sand-600)' }}>
+              {calcAge(patient.dob)}y · {patient.gender} · {isReturning ? `${patient.visits.length} prior visit(s)` : 'New patient'}
+            </div>
+          </div>
+          {isReturning && <Badge color="teal" size="md">Returning Patient</Badge>}
+        </div>
+      </Card>
+
+      {/* Allergy banner for returning */}
+      {isReturning && patient.allergies.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <AllergyBanner allergies={patient.allergies} />
+          <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--sand-100)', borderRadius: 'var(--radius-sm)' }}>
+            <input type="checkbox" id="allergyConfirm" checked={allergyConfirmed} onChange={e => setAllergyConfirmed(e.target.checked)}
+              style={{ width: 16, height: 16, cursor: 'pointer' }} />
+            <label htmlFor="allergyConfirm" style={{ fontSize: 13, color: 'var(--sand-700)', cursor: 'pointer' }}>
+              Confirmed unchanged — allergies reviewed and accurate
+            </label>
+          </div>
+        </div>
+      )}
+
+      {/* Warnings */}
+      {warnings.length > 0 && (
+        <div style={{ marginBottom: 16, background: 'var(--amber-100)', border: '1.5px solid var(--amber-400)', borderRadius: 'var(--radius-md)', padding: '10px 14px' }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--amber-600)', marginBottom: 4 }}>⚠ Vital Signs Alert</div>
+          {warnings.map((w, i) => <div key={i} style={{ fontSize: 13, color: 'var(--amber-600)' }}>{w}</div>)}
+        </div>
+      )}
+
+      <Card style={{ padding: '24px', marginBottom: 16 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--sand-800)', marginBottom: 16 }}>Vitals</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Input label="Systolic BP" value={vitals.bpSys} onChange={v => setV('bpSys', v)} placeholder="120" unit="mmHg" />
+            <Input label="Diastolic BP" value={vitals.bpDia} onChange={v => setV('bpDia', v)} placeholder="80" unit="mmHg" />
+          </div>
+          <Input label="Heart Rate" value={vitals.hr} onChange={v => setV('hr', v)} placeholder="72" unit="bpm" />
+          <Input label="Respiratory Rate" value={vitals.rr} onChange={v => setV('rr', v)} placeholder="16" unit="/min" />
+          <Input label="Temperature" value={vitals.temp} onChange={v => setV('temp', v)} placeholder="98.6"
+            unit={tempUnit} unitOptions={['°F', '°C']} onUnitChange={setTempUnit} />
+          <Input label="Weight" value={vitals.weight} onChange={v => setV('weight', v)} placeholder="70"
+            unit={weightUnit} unitOptions={['kg', 'lbs']} onUnitChange={setWeightUnit} />
+          <Input label="Height" value={vitals.height} onChange={v => setV('height', v)} placeholder="170"
+            unit={heightUnit} unitOptions={['cm', 'in']} onUnitChange={setHeightUnit} />
+          <Input label="SpO₂" value={vitals.spo2} onChange={v => setV('spo2', v)} placeholder="99" unit="%" />
+        </div>
+      </Card>
+
+      <Card style={{ padding: '24px', marginBottom: 16 }}>
+        <Textarea label="Chief Complaint" value={vitals.chiefComplaint} onChange={v => setV('chiefComplaint', v)}
+          placeholder="Patient's primary reason for visit..." rows={3} required />
+        <div style={{ marginTop: 14 }}>
+          <Input label="Allergies & Intolerances" value={allergies} onChange={setAllergies}
+            placeholder="Penicillin, Sulfa drugs... (or NKDA)" hint="Separate multiple allergies with commas" />
+        </div>
+      </Card>
+
+      <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+        <Button variant="secondary">Cancel</Button>
+        <Button onClick={submit} style={{ background: '#1E8A7D' }}>
+          ✓ Check In & Send to Care Queue
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─── PROVIDER VIEWS ───────────────────────────────────────────────────────────
+function CareQueue({ queue, onAssume }) {
+  const [expanded, setExpanded] = useState(null);
+
+  return (
+    <div style={{ padding: '24px', maxWidth: 900, margin: '0 auto' }}>
+      <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--sand-900)' }}>Care Queue</h1>
+          <p style={{ fontSize: 13, color: 'var(--sand-600)', marginTop: 2 }}>Patients waiting to be seen</p>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#30A99B', animation: 'pulse 2s infinite' }}></div>
+          <span style={{ fontSize: 12, color: 'var(--sand-600)' }}>Live</span>
+        </div>
+      </div>
+
+      {queue.length === 0 ? (
+        <Card style={{ padding: '60px', textAlign: 'center' }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>✓</div>
+          <div style={{ fontSize: 16, fontWeight: 500, color: 'var(--sand-700)' }}>Queue is empty</div>
+          <div style={{ fontSize: 13, color: 'var(--sand-500)', marginTop: 4 }}>All patients have been seen</div>
+        </Card>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {queue.map((item, i) => (
+            <QueueCard key={item.id} item={item} index={i}
+              expanded={expanded === item.id}
+              onToggle={() => setExpanded(expanded === item.id ? null : item.id)}
+              onAssume={() => onAssume(item)}
+              actionLabel="Assume Patient"
+              showVitals />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function QueueCard({ item, index, expanded, onToggle, onAssume, actionLabel, showVitals }) {
+  const age = item.patient ? calcAge(item.patient.dob) : '';
+  const waitMins = Math.floor((Date.now() - item.checkInTime) / 60000);
+  const hasAllergies = item.patient?.allergies?.length > 0;
+
+  return (
+    <Card style={{ overflow: 'visible' }}>
+      <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}
+        onClick={onToggle}>
+        {/* Position */}
+        <div style={{ width: 28, height: 28, borderRadius: '50%', background: index === 0 ? '#1E8A7D' : 'var(--sand-200)',
+          color: index === 0 ? '#fff' : 'var(--sand-600)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{index + 1}</div>
+        <PhotoPlaceholder name={`${item.patient.firstName} ${item.patient.lastName}`} size={44} />
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+            <span style={{ fontSize: 15, fontWeight: 600 }}>{item.patient.firstName} {item.patient.lastName}</span>
+            <span style={{ fontSize: 13, color: 'var(--sand-500)' }}>{age}y · {item.patient.gender}</span>
+            {hasAllergies && <Badge color="red">⚠ Allergies</Badge>}
+            {item.patient.visits.length > 0 && <Badge color="teal">Returning</Badge>}
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--sand-600)' }}>
+            <span style={{ marginRight: 12 }}>🕐 {minutesAgo(item.checkInTime)}</span>
+            <span style={{ marginRight: 12 }}>👤 Triage: {item.triageInitials}</span>
+            {item.vitals?.chiefComplaint && <span>"{item.vitals.chiefComplaint}"</span>}
+          </div>
+        </div>
+        {/* Vital flags */}
+        {showVitals && item.warnings?.length > 0 && (
+          <Badge color="amber">⚠ {item.warnings.length} flag{item.warnings.length > 1 ? 's' : ''}</Badge>
+        )}
+        <Button onClick={e => { e.stopPropagation(); onAssume(); }} size="sm">{actionLabel}</Button>
+        <span style={{ color: 'var(--sand-400)', fontSize: 14, marginLeft: 4 }}>{expanded ? '▲' : '▼'}</span>
+      </div>
+
+      {expanded && (
+        <div className="animate-in" style={{ borderTop: '1px solid var(--sand-100)', padding: '16px 20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          {/* Vitals summary */}
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--sand-600)', marginBottom: 8 }}>VITALS</div>
+            {item.vitals && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                {[
+                  ['BP', `${item.vitals.bpSys || '—'}/${item.vitals.bpDia || '—'}`, false],
+                  ['HR', item.vitals.hr ? `${item.vitals.hr} bpm` : '—', item.vitals.hr && (parseInt(item.vitals.hr) > 120 || parseInt(item.vitals.hr) < 40)],
+                  ['Temp', item.vitals.temp ? `${item.vitals.temp}${item.vitals.tempUnit}` : '—', false],
+                  ['SpO₂', item.vitals.spo2 ? `${item.vitals.spo2}%` : '—', item.vitals.spo2 && parseFloat(item.vitals.spo2) < 90],
+                  ['RR', item.vitals.rr ? `${item.vitals.rr}/min` : '—', false],
+                  ['Wt', item.vitals.weight ? `${item.vitals.weight}${item.vitals.weightUnit}` : '—', false],
+                ].map(([l, v, warn]) => (
+                  <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 8px',
+                    background: warn ? 'var(--amber-100)' : 'var(--sand-50)', borderRadius: 4 }}>
+                    <span style={{ fontSize: 12, color: 'var(--sand-500)' }}>{l}</span>
+                    <span style={{ fontSize: 12, fontWeight: 500, color: warn ? 'var(--amber-600)' : 'var(--sand-800)' }}>
+                      {v} {warn && '⚠'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          {/* Allergies + history */}
+          <div>
+            <AllergyBanner allergies={item.patient.allergies} />
+            {item.patient.visits.length > 0 && (
+              <div style={{ marginTop: 12 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--sand-600)', marginBottom: 6 }}>PRIOR VISITS</div>
+                {item.patient.visits.slice(-2).map(v => (
+                  <div key={v.id} style={{ fontSize: 12, color: 'var(--sand-600)', padding: '4px 0', borderBottom: '1px solid var(--sand-100)' }}>
+                    {v.date} · {v.provider} · {v.soapp.assessment}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+// ─── SOAPP NOTE VIEW ──────────────────────────────────────────────────────────
+function SOAPPView({ item, onClose, onSendToPharmacy }) {
+  const [note, setNote] = useState({ subjective: '', objective: '', assessment: '', plan: '', procedures: '' });
+  const [adminMeds, setAdminMeds] = useState([]);
+  const [rxRequests, setRxRequests] = useState([]);
+  const [activeTab, setActiveTab] = useState('soapp');
+  const [lastSaved, setLastSaved] = useState(null);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+
+  const setN = (k, v) => setNote(n => ({ ...n, [k]: v }));
+
+  // Auto-save simulation
+  useEffect(() => {
+    const t = setInterval(() => setLastSaved(new Date()), 30000);
+    return () => clearInterval(t);
+  }, []);
+
+  const addAdminMed = () => setAdminMeds(m => [...m, { id: Date.now(), name: '', dose: '', unit: 'mg', route: 'Oral', time: formatTime() }]);
+  const updateMed = (id, k, v) => setAdminMeds(m => m.map(x => x.id === id ? { ...x, [k]: v } : x));
+  const removeMed = (id) => setAdminMeds(m => m.filter(x => x.id !== id));
+
+  const addRx = () => setRxRequests(r => [...r, { id: Date.now(), name: '', dose: '', unit: 'mg', route: 'Oral', sig: '', notes: '' }]);
+  const updateRx = (id, k, v) => setRxRequests(r => r.map(x => x.id === id ? { ...x, [k]: v } : x));
+  const removeRx = (id) => setRxRequests(r => r.filter(x => x.id !== id));
+
+  const handleSendToPharmacy = () => {
+    if (rxRequests.length === 0) { alert('Add at least one pharmacy request, or use "Close Visit Directly".'); return; }
+    onSendToPharmacy({ note, adminMeds, rxRequests });
+  };
+
+  const soappSections = [
+    { key: 'subjective', label: 'S — Subjective', placeholder: "Patient's reported symptoms, chief complaint, history of present illness..." },
+    { key: 'objective', label: 'O — Objective', placeholder: 'Clinical observations, physical exam findings, reference to vitals...' },
+    { key: 'assessment', label: 'A — Assessment', placeholder: 'Diagnosis or differential diagnosis...' },
+    { key: 'plan', label: 'P — Plan', placeholder: 'Treatment plan, follow-up instructions, referrals...' },
+    { key: 'procedures', label: 'Procedures', placeholder: 'Procedures completed during this encounter...' },
+  ];
+
+  return (
+    <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
+      {/* Left pane — patient info */}
+      <div style={{ width: 280, background: 'var(--sand-50)', borderRight: '1px solid var(--sand-200)', display: 'flex', flexDirection: 'column', overflow: 'hidden', flexShrink: 0 }}>
+        <div style={{ padding: '20px 18px', borderBottom: '1px solid var(--sand-200)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+            <PhotoPlaceholder name={`${item.patient.firstName} ${item.patient.lastName}`} size={52} />
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--sand-900)' }}>{item.patient.firstName} {item.patient.lastName}</div>
+              <div style={{ fontSize: 12, color: 'var(--sand-600)' }}>{calcAge(item.patient.dob)}y · {item.patient.gender}</div>
+              <div style={{ fontSize: 11, color: 'var(--sand-500)' }}>ID: {item.patient.id}</div>
+            </div>
+          </div>
+          <AllergyBanner allergies={item.patient.allergies} />
+        </div>
+
+        {/* Current vitals */}
+        <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--sand-200)' }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--sand-500)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 10 }}>Current Vitals</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+            {[
+              ['BP', `${item.vitals?.bpSys || '—'}/${item.vitals?.bpDia || '—'}`],
+              ['HR', item.vitals?.hr ? `${item.vitals.hr} bpm` : '—'],
+              ['Temp', item.vitals?.temp ? `${item.vitals.temp}${item.vitals.tempUnit || '°F'}` : '—'],
+              ['SpO₂', item.vitals?.spo2 ? `${item.vitals.spo2}%` : '—'],
+              ['RR', item.vitals?.rr ? `${item.vitals.rr}/min` : '—'],
+              ['Wt', item.vitals?.weight ? `${item.vitals.weight} ${item.vitals.weightUnit || 'kg'}` : '—'],
+            ].map(([l, v]) => (
+              <div key={l} style={{ background: '#fff', padding: '6px 8px', borderRadius: 6, border: '1px solid var(--sand-200)' }}>
+                <div style={{ fontSize: 10, color: 'var(--sand-400)' }}>{l}</div>
+                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--sand-900)' }}>{v}</div>
+              </div>
+            ))}
+          </div>
+          {item.vitals?.chiefComplaint && (
+            <div style={{ marginTop: 10, padding: '8px 10px', background: 'var(--teal-50)', borderRadius: 6, border: '1px solid var(--teal-100)' }}>
+              <div style={{ fontSize: 10, color: 'var(--teal-600)', fontWeight: 600, marginBottom: 2 }}>CHIEF COMPLAINT</div>
+              <div style={{ fontSize: 12, color: 'var(--sand-800)' }}>{item.vitals.chiefComplaint}</div>
+            </div>
+          )}
+        </div>
+
+        {/* Visit history */}
+        <div style={{ flex: 1, overflow: 'auto', padding: '14px 18px' }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--sand-500)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 10 }}>Visit History</div>
+          {item.patient.visits.length === 0 ? (
+            <div style={{ fontSize: 12, color: 'var(--sand-400)', fontStyle: 'italic' }}>No prior visits</div>
+          ) : (
+            item.patient.visits.map(v => (
+              <div key={v.id} style={{ marginBottom: 14, padding: '10px 12px', background: '#fff', borderRadius: 8, border: '1px solid var(--sand-200)' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--sand-700)', marginBottom: 4 }}>{v.date}</div>
+                <div style={{ fontSize: 11, color: 'var(--sand-500)', marginBottom: 6 }}>{v.provider}</div>
+                <div style={{ fontSize: 12, color: 'var(--sand-700)', marginBottom: 4 }}><strong>A:</strong> {v.soapp.assessment}</div>
+                <div style={{ fontSize: 12, color: 'var(--sand-600)' }}><strong>P:</strong> {v.soapp.plan}</div>
+                {v.prescriptions?.length > 0 && (
+                  <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid var(--sand-100)' }}>
+                    {v.prescriptions.map((rx, i) => (
+                      <div key={i} style={{ fontSize: 11, color: 'var(--sand-500)' }}>💊 {rx.name} {rx.dose}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Right pane — documentation */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* Top bar */}
+        <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--sand-200)', display: 'flex', alignItems: 'center', gap: 16, background: '#fff' }}>
+          <div style={{ display: 'flex', gap: 2 }}>
+            {[
+              { id: 'soapp', label: 'SOAPP Note' },
+              { id: 'meds', label: 'Administered' },
+              { id: 'rx', label: 'Pharmacy Requests' },
+            ].map(tab => (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                style={{
+                  padding: '6px 14px', borderRadius: 'var(--radius-sm)', border: 'none',
+                  background: activeTab === tab.id ? 'var(--teal-100)' : 'transparent',
+                  color: activeTab === tab.id ? 'var(--teal-600)' : 'var(--sand-600)',
+                  fontSize: 13, fontWeight: activeTab === tab.id ? 600 : 400,
+                  cursor: 'pointer', fontFamily: 'var(--font-body)'
+                }}>{tab.label}{tab.id === 'rx' && rxRequests.length > 0 && ` (${rxRequests.length})`}
+              </button>
+            ))}
+          </div>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+            {lastSaved && <span style={{ fontSize: 11, color: 'var(--sand-400)' }}>Saved {formatTime(lastSaved)}</span>}
+            <Button variant="ghost" size="sm" onClick={() => setLastSaved(new Date())}>↺ Save</Button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div style={{ flex: 1, overflow: 'auto', padding: '20px' }}>
+          {activeTab === 'soapp' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {soappSections.map(s => (
+                <div key={s.key}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--sand-700)', marginBottom: 6, letterSpacing: '0.02em' }}>{s.label}</div>
+                  <textarea value={note[s.key]} onChange={e => setN(s.key, e.target.value)}
+                    placeholder={s.placeholder} rows={s.key === 'procedures' ? 2 : 4}
+                    style={{
+                      width: '100%', padding: '10px 12px', borderRadius: 'var(--radius-sm)',
+                      border: '1.5px solid var(--sand-200)', fontSize: 14,
+                      fontFamily: 'var(--font-body)', resize: 'vertical', outline: 'none',
+                      lineHeight: 1.6, color: 'var(--sand-900)', background: '#fff'
+                    }} />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {activeTab === 'meds' && (
+            <div>
+              <SectionHeader title="Administered in Clinic" count={adminMeds.length}
+                action={<Button size="sm" onClick={addAdminMed}>+ Add</Button>} />
+              {adminMeds.length === 0 ? (
+                <div style={{ padding: '32px', textAlign: 'center', color: 'var(--sand-400)', fontSize: 14 }}>
+                  No medications administered in clinic
+                  <br/><Button variant="outline" size="sm" style={{ marginTop: 12 }} onClick={addAdminMed}>+ Add medication</Button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {adminMeds.map(med => (
+                    <Card key={med.id} style={{ padding: '14px 16px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto', gap: 10, alignItems: 'end' }}>
+                        <Input label="Medication / Vaccine" value={med.name} onChange={v => updateMed(med.id, 'name', v)} placeholder="Name or search..." />
+                        <Input label="Dose" value={med.dose} onChange={v => updateMed(med.id, 'dose', v)} placeholder="500" unit={med.unit} />
+                        <Select label="Route" value={med.route} onChange={v => updateMed(med.id, 'route', v)} options={[
+                          { value: 'Oral', label: 'Oral' }, { value: 'IV', label: 'IV' }, { value: 'IM', label: 'IM' },
+                          { value: 'SC', label: 'SC' }, { value: 'Topical', label: 'Topical' }, { value: 'Nebulized', label: 'Nebulized' }
+                        ]} />
+                        <Input label="Time" value={med.time} onChange={v => updateMed(med.id, 'time', v)} />
+                        <button onClick={() => removeMed(med.id)} style={{ background: 'none', border: 'none', color: 'var(--red-400)', cursor: 'pointer', fontSize: 16, paddingBottom: 2 }}>✕</button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'rx' && (
+            <div>
+              <SectionHeader title="Pharmacy Requests" count={rxRequests.length}
+                action={<Button size="sm" onClick={addRx}>+ Add Rx</Button>} />
+              {rxRequests.length === 0 ? (
+                <div style={{ padding: '32px', textAlign: 'center', color: 'var(--sand-400)', fontSize: 14 }}>
+                  No pharmacy requests added<br/>
+                  <Button variant="outline" size="sm" style={{ marginTop: 12 }} onClick={addRx}>+ Add prescription</Button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {rxRequests.map(rx => {
+                    const allergyConflict = item.patient.allergies.some(a =>
+                      rx.name.toLowerCase().includes(a.toLowerCase())
+                    );
+                    return (
+                      <Card key={rx.id} style={{ padding: '16px' }}>
+                        {allergyConflict && (
+                          <div style={{ marginBottom: 10, padding: '8px 12px', background: 'var(--red-50)', border: '1.5px solid var(--red-400)', borderRadius: 6, fontSize: 12, color: 'var(--red-700)', fontWeight: 500 }}>
+                            ⚠️ Allergy conflict detected — verify before dispensing
+                          </div>
+                        )}
+                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 10, alignItems: 'end', marginBottom: 10 }}>
+                          <Input label="Medication" value={rx.name} onChange={v => updateRx(rx.id, 'name', v)} placeholder="Medication name..." />
+                          <Input label="Dose" value={rx.dose} onChange={v => updateRx(rx.id, 'dose', v)} placeholder="500" unit={rx.unit} />
+                          <Select label="Route" value={rx.route} onChange={v => updateRx(rx.id, 'route', v)} options={[
+                            { value: 'Oral', label: 'Oral' }, { value: 'IV', label: 'IV' }, { value: 'IM', label: 'IM' },
+                            { value: 'SC', label: 'SC' }, { value: 'Topical', label: 'Topical' }
+                          ]} />
+                          <button onClick={() => removeRx(rx.id)} style={{ background: 'none', border: 'none', color: 'var(--red-400)', cursor: 'pointer', fontSize: 16, paddingBottom: 2 }}>✕</button>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                          <Input label="Sig / Instructions" value={rx.sig} onChange={v => updateRx(rx.id, 'sig', v)} placeholder="e.g. Take with food, once daily..." />
+                          <Input label="Notes to Pharmacist" value={rx.notes} onChange={v => updateRx(rx.id, 'notes', v)} placeholder="Optional clinical context..." />
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Bottom action bar */}
+        <div style={{ padding: '14px 20px', borderTop: '1px solid var(--sand-200)', background: '#fff', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Button variant="ghost" size="sm" onClick={() => {}}>Return to Triage</Button>
+          <Button variant="ghost" size="sm" onClick={() => {}}>Discharge Patient</Button>
+          <div style={{ flex: 1 }}></div>
+          <Button variant="secondary" onClick={() => onClose(false)}>Close Visit Directly</Button>
+          <Button onClick={handleSendToPharmacy}>Send to Pharmacy →</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── PHARMACY VIEWS ───────────────────────────────────────────────────────────
+function PharmacyView({ queue, onAssume }) {
+  const [expanded, setExpanded] = useState(null);
+  return (
+    <div style={{ padding: '24px', maxWidth: 900, margin: '0 auto' }}>
+      <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--sand-900)' }}>Pharmacy Queue</h1>
+          <p style={{ fontSize: 13, color: 'var(--sand-600)', marginTop: 2 }}>Prescriptions awaiting fulfillment</p>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#30A99B', animation: 'pulse 2s infinite' }}></div>
+          <span style={{ fontSize: 12, color: 'var(--sand-600)' }}>Live</span>
+        </div>
+      </div>
+
+      {queue.length === 0 ? (
+        <Card style={{ padding: '60px', textAlign: 'center' }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>✓</div>
+          <div style={{ fontSize: 16, fontWeight: 500, color: 'var(--sand-700)' }}>Queue is empty</div>
+          <div style={{ fontSize: 13, color: 'var(--sand-500)', marginTop: 4 }}>No prescriptions pending</div>
+        </Card>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {queue.map((item, i) => (
+            <QueueCard key={item.id} item={item} index={i}
+              expanded={expanded === item.id}
+              onToggle={() => setExpanded(expanded === item.id ? null : item.id)}
+              onAssume={() => onAssume(item)}
+              actionLabel="Assume Patient"
+              showVitals={false} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PharmacyFulfillment({ item, onClose }) {
+  const [rxStatus, setRxStatus] = useState(
+    item.rxRequests.map(rx => ({ ...rx, status: 'pending', qty: '', reason: '', freq: 'once_daily', reminder: false }))
+  );
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+
+  const updateStatus = (id, updates) => {
+    setRxStatus(s => s.map(r => r.id === id ? { ...r, ...updates } : r));
+  };
+
+  const allAddressed = rxStatus.every(r => r.status !== 'pending');
+  const hasAllergyConflict = (rx) => item.patient.allergies.some(a => rx.name.toLowerCase().includes(a.toLowerCase()));
+
+  return (
+    <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
+      {/* Left: Patient info */}
+      <div style={{ width: 260, background: 'var(--sand-50)', borderRight: '1px solid var(--sand-200)', display: 'flex', flexDirection: 'column', overflow: 'auto', flexShrink: 0 }}>
+        <div style={{ padding: '20px 18px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+            <PhotoPlaceholder name={`${item.patient.firstName} ${item.patient.lastName}`} size={52} />
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--sand-900)' }}>{item.patient.firstName} {item.patient.lastName}</div>
+              <div style={{ fontSize: 12, color: 'var(--sand-600)' }}>{calcAge(item.patient.dob)}y · {item.patient.gender}</div>
+              <div style={{ fontSize: 11, color: 'var(--sand-500)' }}>Provider: {item.provider}</div>
+            </div>
+          </div>
+
+          {/* PROMINENT allergy warning */}
+          {item.patient.allergies.length > 0 ? (
+            <div style={{
+              background: 'var(--red-50)', border: '2px solid var(--red-500)', borderRadius: 'var(--radius-md)',
+              padding: '12px 14px', marginBottom: 14
+            }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--red-700)', marginBottom: 6 }}>⚠️ ALLERGIES — REVIEW BEFORE DISPENSING</div>
+              {item.patient.allergies.map((a, i) => (
+                <div key={i} style={{ fontSize: 13, color: 'var(--red-700)', fontWeight: 600, padding: '2px 0' }}>• {a}</div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ background: 'var(--teal-50)', border: '1.5px solid var(--teal-200)', borderRadius: 'var(--radius-md)', padding: '10px 14px', marginBottom: 14 }}>
+              <div style={{ fontSize: 13, color: 'var(--teal-600)', fontWeight: 500 }}>✓ No known allergies (NKDA)</div>
+            </div>
+          )}
+
+          {/* SOAPP read-only */}
+          {item.note && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--sand-500)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8 }}>Clinical Notes (Read Only)</div>
+              {item.note.assessment && (
+                <div style={{ marginBottom: 8, padding: '8px 10px', background: '#fff', borderRadius: 6, border: '1px solid var(--sand-200)' }}>
+                  <div style={{ fontSize: 10, color: 'var(--sand-400)', fontWeight: 600 }}>ASSESSMENT</div>
+                  <div style={{ fontSize: 12, color: 'var(--sand-700)' }}>{item.note.assessment}</div>
+                </div>
+              )}
+              {item.note.plan && (
+                <div style={{ padding: '8px 10px', background: '#fff', borderRadius: 6, border: '1px solid var(--sand-200)' }}>
+                  <div style={{ fontSize: 10, color: 'var(--sand-400)', fontWeight: 600 }}>PLAN</div>
+                  <div style={{ fontSize: 12, color: 'var(--sand-700)' }}>{item.note.plan}</div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Right: Fulfillment */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--sand-200)', background: '#fff' }}>
+          <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--sand-900)' }}>Prescription Fulfillment</h2>
+          <div style={{ fontSize: 13, color: 'var(--sand-500)', marginTop: 2 }}>
+            {rxStatus.filter(r => r.status !== 'pending').length} of {rxStatus.length} addressed
+          </div>
+        </div>
+
+        <div style={{ flex: 1, overflow: 'auto', padding: '20px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {rxStatus.map((rx, i) => {
+              const conflict = hasAllergyConflict(rx);
+              return (
+                <Card key={rx.id} style={{ padding: '18px 20px', borderLeft: `4px solid ${rx.status === 'filled' ? '#30A99B' : rx.status === 'partial' ? '#FBBF24' : rx.status === 'unfilled' ? '#EF4444' : 'var(--sand-300)'}` }}>
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                      <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--sand-900)' }}>#{i + 1} {rx.name}</span>
+                      {conflict && <Badge color="red">⚠ Allergy Conflict</Badge>}
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--sand-600)' }}>
+                      {rx.dose} {rx.unit} · {rx.route}
+                      {rx.sig && ` · "${rx.sig}"`}
+                    </div>
+                    {rx.notes && <div style={{ fontSize: 12, color: 'var(--teal-600)', marginTop: 4 }}>📝 Provider note: {rx.notes}</div>}
+                  </div>
+
+                  {conflict && (
+                    <div style={{ marginBottom: 12, padding: '10px 12px', background: 'var(--red-50)', border: '1.5px solid var(--red-400)', borderRadius: 6 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--red-700)' }}>⚠️ ALLERGY CONFLICT — Cannot dismiss this warning</div>
+                      <div style={{ fontSize: 12, color: 'var(--red-600)', marginTop: 2 }}>This medication matches a known patient allergy. If proceeding, document override reason below.</div>
+                    </div>
+                  )}
+
+                  {/* Status buttons */}
+                  <div style={{ display: 'flex', gap: 8, marginBottom: rx.status !== 'pending' ? 12 : 0 }}>
+                    {[
+                      { value: 'filled', label: '✓ Filled', color: '#30A99B' },
+                      { value: 'partial', label: '~ Partial', color: '#D97706' },
+                      { value: 'unfilled', label: '✕ Unable', color: '#EF4444' },
+                    ].map(opt => (
+                      <button key={opt.value} onClick={() => updateStatus(rx.id, { status: opt.value })}
+                        style={{
+                          padding: '7px 16px', borderRadius: 'var(--radius-sm)', border: `1.5px solid ${rx.status === opt.value ? opt.color : 'var(--sand-300)'}`,
+                          background: rx.status === opt.value ? opt.color : 'transparent',
+                          color: rx.status === opt.value ? '#fff' : 'var(--sand-600)',
+                          cursor: 'pointer', fontSize: 13, fontWeight: 500, fontFamily: 'var(--font-body)'
+                        }}>{opt.label}</button>
+                    ))}
+                  </div>
+
+                  {rx.status === 'filled' && (
+                    <div className="animate-in" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginTop: 10 }}>
+                      <Input label="Qty Dispensed" value={rx.qty} onChange={v => updateStatus(rx.id, { qty: v })} placeholder="e.g. 10 tablets" />
+                      <Select label="Frequency" value={rx.freq} onChange={v => updateStatus(rx.id, { freq: v })} options={[
+                        { value: 'once_daily', label: 'Once daily' },
+                        { value: 'twice_daily', label: 'Twice daily' },
+                        { value: 'three_daily', label: 'Three times daily' },
+                        { value: 'prn', label: 'As needed' },
+                        { value: 'other', label: 'Other' },
+                      ]} />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--sand-700)' }}>Reminder</label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 4 }}>
+                          <input type="checkbox" checked={rx.reminder} onChange={e => updateStatus(rx.id, { reminder: e.target.checked })} />
+                          <span style={{ fontSize: 13 }}>Set reminder</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {(rx.status === 'partial' || rx.status === 'unfilled') && (
+                    <div className="animate-in" style={{ marginTop: 10 }}>
+                      <Input label="Reason" value={rx.reason} onChange={v => updateStatus(rx.id, { reason: v })}
+                        placeholder={rx.status === 'partial' ? 'Out of stock, partial supply...' : 'Out of stock, contraindication...'} />
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Close bar */}
+        <div style={{ padding: '14px 20px', borderTop: '1px solid var(--sand-200)', background: '#fff', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 13, color: allAddressed ? 'var(--teal-600)' : 'var(--sand-500)' }}>
+            {allAddressed ? '✓ All prescriptions addressed' : `${rxStatus.filter(r => r.status === 'pending').length} prescription(s) pending`}
+          </span>
+          <div style={{ flex: 1 }}></div>
+          <Button variant="ghost" size="sm">Flag Provider</Button>
+          <Button disabled={!allAddressed} onClick={() => onClose(item)}>
+            Close Patient Chart ✓
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── MANAGER VIEW ─────────────────────────────────────────────────────────────
+function ManagerView({ trip, activeView }) {
+  const [volunteers, setVolunteers] = useState(trip.volunteers);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newVol, setNewVol] = useState({ name: '', email: '', role: 'Provider' });
+
+  const addVolunteer = () => {
+    if (!newVol.name || !newVol.email) return;
+    setVolunteers(v => [...v, { id: 'U' + Date.now(), ...newVol }]);
+    setNewVol({ name: '', email: '', role: 'Provider' });
+    setShowAdd(false);
+  };
+
+  if (activeView === 'trip') {
+    return (
+      <div style={{ padding: '32px 24px', maxWidth: 700, margin: '0 auto' }}>
+        <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--sand-900)', marginBottom: 24 }}>Trip Configuration</h1>
+        <Card style={{ padding: '24px', marginBottom: 20 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: 'var(--sand-700)' }}>Trip Details</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <Input label="Trip Name" value={trip.name} onChange={() => {}} />
+            <Input label="Location" value={trip.location} onChange={() => {}} />
+            <Input label="Start Date" value="2026-05-01" type="date" onChange={() => {}} />
+            <Input label="End Date" value="2026-05-07" type="date" onChange={() => {}} />
+          </div>
+        </Card>
+        <Card style={{ padding: '24px' }}>
+          <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: 'var(--sand-700)' }}>Status</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
+            {[['Volunteers', volunteers.length], ['Active Today', '5'], ['Patients Seen', '24']].map(([l, v]) => (
+              <div key={l} style={{ padding: '16px', background: 'var(--teal-50)', borderRadius: 'var(--radius-md)', textAlign: 'center' }}>
+                <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--teal-500)' }}>{v}</div>
+                <div style={{ fontSize: 12, color: 'var(--teal-600)', marginTop: 2 }}>{l}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  if (activeView === 'dashboard') {
+    return (
+      <div style={{ padding: '32px 24px', maxWidth: 900, margin: '0 auto' }}>
+        <h1 style={{ fontSize: 22, fontWeight: 600, marginBottom: 24 }}>Dashboard</h1>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 14, marginBottom: 24 }}>
+          {[
+            ['Completed Today', '24', 'teal'],
+            ['In Progress', '3', 'amber'],
+            ['Rx Fill Rate', '96%', 'teal'],
+            ['Avg Wait', '14 min', 'sand'],
+          ].map(([l, v, color]) => (
+            <Card key={l} style={{ padding: '20px' }}>
+              <div style={{ fontSize: 28, fontWeight: 700, color: color === 'teal' ? 'var(--teal-500)' : color === 'amber' ? 'var(--amber-600)' : 'var(--sand-700)' }}>{v}</div>
+              <div style={{ fontSize: 13, color: 'var(--sand-500)', marginTop: 4 }}>{l}</div>
+            </Card>
+          ))}
+        </div>
+        <Card style={{ padding: '24px' }}>
+          <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 14, color: 'var(--sand-700)' }}>Recent Completed Visits</h3>
+          {[
+            { name: 'Maria Santos', provider: 'Dr. Chen', pharmacy: 'M. Flores', rx: '2/2', duration: '32 min' },
+            { name: 'Carlos Mendez', provider: 'Dr. Patel', pharmacy: 'M. Flores', rx: '1/1', duration: '18 min' },
+            { name: 'Ana Reyes', provider: 'Dr. Chen', pharmacy: 'M. Flores', rx: '3/3', duration: '41 min' },
+          ].map((r, i) => (
+            <div key={i} style={{ display: 'flex', gap: 16, padding: '12px 0', borderBottom: '1px solid var(--sand-100)', alignItems: 'center' }}>
+              <PhotoPlaceholder name={r.name} size={36} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 500 }}>{r.name}</div>
+                <div style={{ fontSize: 12, color: 'var(--sand-500)' }}>{r.provider} · {r.pharmacy}</div>
+              </div>
+              <Badge color="teal">Rx {r.rx}</Badge>
+              <span style={{ fontSize: 12, color: 'var(--sand-500)' }}>{r.duration}</span>
+              <Badge color="green">Complete</Badge>
+            </div>
+          ))}
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: '32px 24px', maxWidth: 800, margin: '0 auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--sand-900)' }}>Volunteer Roster</h1>
+        <Button onClick={() => setShowAdd(true)}>+ Add Volunteer</Button>
+      </div>
+
+      {showAdd && (
+        <Card style={{ padding: '20px', marginBottom: 16, border: '1.5px solid var(--teal-300)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 12, alignItems: 'end' }}>
+            <Input label="Name" value={newVol.name} onChange={v => setNewVol(n => ({ ...n, name: v }))} required />
+            <Input label="Email" value={newVol.email} onChange={v => setNewVol(n => ({ ...n, email: v }))} required />
+            <Select label="Role" value={newVol.role} onChange={v => setNewVol(n => ({ ...n, role: v }))} options={[
+              { value: 'Triage', label: 'Triage' }, { value: 'Provider', label: 'Provider' },
+              { value: 'Pharmacy', label: 'Pharmacy' }, { value: 'Manager', label: 'Manager' }
+            ]} />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button onClick={addVolunteer}>Add</Button>
+              <Button variant="secondary" onClick={() => setShowAdd(false)}>Cancel</Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      <Card>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ background: 'var(--sand-50)' }}>
+              {['Volunteer', 'Role', 'Email', 'Status', ''].map(h => (
+                <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600, color: 'var(--sand-500)', letterSpacing: '0.04em', textTransform: 'uppercase', borderBottom: '1px solid var(--sand-200)' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {volunteers.map((v, i) => (
+              <tr key={v.id} style={{ borderBottom: '1px solid var(--sand-100)' }}>
+                <td style={{ padding: '12px 16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <PhotoPlaceholder name={v.name} size={32} />
+                    <span style={{ fontSize: 14, fontWeight: 500 }}>{v.name}</span>
+                  </div>
+                </td>
+                <td style={{ padding: '12px 16px' }}>
+                  <Badge color={v.role === 'Provider' ? 'teal' : v.role === 'Triage' ? 'blue' : v.role === 'Pharmacy' ? 'amber' : 'sand'}>
+                    {v.role}
+                  </Badge>
+                </td>
+                <td style={{ padding: '12px 16px', fontSize: 13, color: 'var(--sand-600)' }}>{v.email}</td>
+                <td style={{ padding: '12px 16px' }}><Badge color="green">Active</Badge></td>
+                <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                  <Button variant="ghost" size="sm">Edit</Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+    </div>
+  );
+}
+
+// ─── ADDENDUM MODAL ───────────────────────────────────────────────────────────
+function AddendumModal({ visit, role, onClose }) {
+  const [activeSection, setActiveSection] = useState('soapp');
+  const [addendumText, setAddendumText] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [addenda, setAddenda] = useState(visit.addenda || {});
+
+  const roleScope = {
+    Triage: ['triage'],
+    Provider: ['soapp', 'meds'],
+    Pharmacy: ['rx'],
+    Manager: ['soapp', 'meds', 'rx', 'triage'],
+  };
+  const canAddend = (section) => (roleScope[role] || []).includes(section);
+
+  const submitAddendum = () => {
+    if (!addendumText.trim()) return;
+    const entry = {
+      text: addendumText,
+      author: role === 'Triage' ? 'J. Rivera' : role === 'Provider' ? 'Dr. Chen' : role === 'Pharmacy' ? 'M. Flores' : 'T. Wright',
+      role,
+      time: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+    };
+    setAddenda(a => ({ ...a, [activeSection]: [...(a[activeSection] || []), entry] }));
+    setAddendumText('');
+    setShowForm(false);
+  };
+
+  const sections = [
+    { id: 'soapp', label: 'SOAPP Note', icon: '📝' },
+    { id: 'meds', label: 'Administered', icon: '💉' },
+    { id: 'rx', label: 'Dispensed Rx', icon: '💊' },
+  ];
+
+  const sectionContent = {
+    soapp: visit.note ? [
+      { label: 'S — Subjective', value: visit.note.subjective },
+      { label: 'O — Objective', value: visit.note.objective },
+      { label: 'A — Assessment', value: visit.note.assessment },
+      { label: 'P — Plan', value: visit.note.plan },
+      { label: 'Procedures', value: visit.note.procedures },
+    ].filter(x => x.value) : [],
+    meds: (visit.adminMeds || []).map(m => ({ label: 'Administered', value: `${m.name} ${m.dose}${m.unit} · ${m.route} · ${m.time}` })),
+    rx: (visit.rxRequests || []).map(r => ({ label: r.status || 'Rx', value: `${r.name} ${r.dose}${r.unit} · ${r.route} · "${r.sig}"` })),
+  };
+
+  return (
+    <div className="fade-in" style={{
+      position: 'fixed', inset: 0, background: 'rgba(44,36,25,0.5)', zIndex: 100,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24
+    }}>
+      <div className="animate-in" style={{
+        background: '#fff', borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-lg)',
+        width: '100%', maxWidth: 860, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden'
+      }}>
+        {/* Header */}
+        <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--sand-200)', display: 'flex', alignItems: 'center', gap: 14, background: 'var(--sand-50)' }}>
+          <PhotoPlaceholder name={`${visit.patient.firstName} ${visit.patient.lastName}`} size={40} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 16, fontWeight: 600 }}>{visit.patient.firstName} {visit.patient.lastName}</div>
+            <div style={{ fontSize: 12, color: 'var(--sand-500)' }}>
+              Completed Visit · {formatTime()} &nbsp;·&nbsp;
+              <span style={{ color: 'var(--sand-400)' }}>Read-only — addenda only</span>
+            </div>
+          </div>
+          <AllergyBanner allergies={visit.patient.allergies} />
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: 'var(--sand-400)', padding: '4px 8px' }}>✕</button>
+        </div>
+
+        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+          {/* Section nav */}
+          <div style={{ width: 180, borderRight: '1px solid var(--sand-200)', padding: '16px 12px', background: 'var(--sand-50)', flexShrink: 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--sand-500)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 10 }}>Sections</div>
+            {sections.map(s => (
+              <button key={s.id} onClick={() => { setActiveSection(s.id); setShowForm(false); setAddendumText(''); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px',
+                  borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer', marginBottom: 3,
+                  background: activeSection === s.id ? 'var(--sand-200)' : 'transparent',
+                  fontFamily: 'var(--font-body)', fontSize: 13,
+                  color: activeSection === s.id ? 'var(--sand-900)' : 'var(--sand-600)',
+                  fontWeight: activeSection === s.id ? 500 : 400
+                }}>
+                <span>{s.icon}</span>
+                <span style={{ flex: 1, textAlign: 'left' }}>{s.label}</span>
+                {(addenda[s.id] || []).length > 0 && (
+                  <span style={{ background: 'var(--amber-100)', color: 'var(--amber-600)', borderRadius: 99, padding: '1px 6px', fontSize: 10, fontWeight: 600 }}>
+                    {(addenda[s.id] || []).length}
+                  </span>
+                )}
+              </button>
+            ))}
+
+            <div style={{ marginTop: 16, padding: '10px', background: 'var(--teal-50)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--teal-100)' }}>
+              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--teal-600)', marginBottom: 4 }}>Your scope</div>
+              <div style={{ fontSize: 11, color: 'var(--teal-600)' }}>
+                {role}: {roleScope[role]?.join(', ') || 'none'}
+              </div>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div style={{ flex: 1, overflow: 'auto', padding: '20px 24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h3 style={{ fontSize: 15, fontWeight: 600 }}>{sections.find(s => s.id === activeSection)?.label}</h3>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <Badge color="sand">Read Only</Badge>
+                {canAddend(activeSection) && !showForm && (
+                  <Button size="sm" onClick={() => setShowForm(true)}>+ Add Addendum</Button>
+                )}
+                {!canAddend(activeSection) && (
+                  <span style={{ fontSize: 11, color: 'var(--sand-400)', fontStyle: 'italic' }}>Outside your role scope</span>
+                )}
+              </div>
+            </div>
+
+            {/* Original content */}
+            {sectionContent[activeSection]?.length > 0 ? (
+              <div style={{ background: 'var(--sand-50)', border: '1px solid var(--sand-200)', borderRadius: 'var(--radius-md)', overflow: 'hidden', marginBottom: 16 }}>
+                {sectionContent[activeSection].map((item, i) => (
+                  <div key={i} style={{ padding: '12px 16px', borderBottom: i < sectionContent[activeSection].length - 1 ? '1px solid var(--sand-200)' : 'none' }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--sand-500)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{item.label}</div>
+                    <div style={{ fontSize: 13, color: 'var(--sand-800)', lineHeight: 1.6 }}>{item.value || <span style={{ color: 'var(--sand-400)', fontStyle: 'italic' }}>— not recorded —</span>}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ padding: '24px', background: 'var(--sand-50)', borderRadius: 'var(--radius-md)', textAlign: 'center', color: 'var(--sand-400)', fontSize: 13, marginBottom: 16, fontStyle: 'italic' }}>
+                No content recorded in this section
+              </div>
+            )}
+
+            {/* Existing addenda */}
+            {(addenda[activeSection] || []).map((a, i) => (
+              <div key={i} className="animate-in" style={{
+                background: '#FFFBF0', border: '1.5px solid var(--amber-400)', borderRadius: 'var(--radius-md)',
+                padding: '12px 16px', marginBottom: 10
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--amber-600)', flexShrink: 0 }}></div>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--amber-600)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Addendum</span>
+                  <span style={{ fontSize: 11, color: 'var(--sand-500)', marginLeft: 'auto' }}>
+                    {a.author} · {a.role} · {a.time}
+                  </span>
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--sand-800)', lineHeight: 1.6 }}>{a.text}</div>
+              </div>
+            ))}
+
+            {/* Addendum form */}
+            {showForm && canAddend(activeSection) && (
+              <div className="animate-in" style={{ background: '#fff', border: '1.5px solid var(--teal-400)', borderRadius: 'var(--radius-md)', padding: '16px' }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--sand-800)', marginBottom: 4 }}>New Addendum</div>
+                <div style={{ fontSize: 11, color: 'var(--sand-500)', marginBottom: 12 }}>
+                  Will be recorded as <strong>{role === 'Provider' ? 'Dr. Chen' : role === 'Pharmacy' ? 'M. Flores' : 'J. Rivera'} · {role}</strong> · Cannot be edited after submission
+                </div>
+                <Textarea value={addendumText} onChange={setAddendumText}
+                  placeholder="Enter addendum text — describe the correction or additional information..."
+                  rows={4} />
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 12 }}>
+                  <Button variant="secondary" size="sm" onClick={() => { setShowForm(false); setAddendumText(''); }}>Cancel</Button>
+                  <Button size="sm" disabled={!addendumText.trim()} onClick={submitAddendum}>Submit Addendum</Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── COMPLETED DASHBOARD ──────────────────────────────────────────────────────
+function CompletedDashboard({ completed, role }) {
+  const [selectedVisit, setSelectedVisit] = useState(null);
+
+  // Include seed historical visits for demo richness
+  const allCompleted = [
+    ...SEED_PATIENTS.filter(p => p.visits.length > 0).flatMap(p =>
+      p.visits.map(v => ({
+        id: v.id, patient: p,
+        note: v.soapp, adminMeds: v.administered,
+        rxRequests: v.prescriptions,
+        addenda: {},
+        closedTime: v.date,
+      }))
+    ),
+    ...completed,
+  ];
+
+  return (
+    <div style={{ padding: '24px', maxWidth: 960, margin: '0 auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 600 }}>Completed Visits</h1>
+        <Badge color="teal">{allCompleted.length} total</Badge>
+      </div>
+
+      {allCompleted.length === 0 ? (
+        <Card style={{ padding: '48px', textAlign: 'center', color: 'var(--sand-400)' }}>No completed visits yet</Card>
+      ) : (
+        <Card>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: 'var(--sand-50)' }}>
+                {['Patient', 'Provider', 'Assessment', 'Rx', 'Date', ''].map(h => (
+                  <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 600, color: 'var(--sand-500)', letterSpacing: '0.04em', textTransform: 'uppercase', borderBottom: '1px solid var(--sand-200)' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {allCompleted.map((c, i) => (
+                <tr key={i} onClick={() => setSelectedVisit(c)}
+                  style={{ borderBottom: '1px solid var(--sand-100)', cursor: 'pointer', transition: 'background 0.1s' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--sand-50)'}
+                  onMouseLeave={e => e.currentTarget.style.background = ''}>
+                  <td style={{ padding: '12px 16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <PhotoPlaceholder name={`${c.patient.firstName} ${c.patient.lastName}`} size={32} />
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 500 }}>{c.patient.firstName} {c.patient.lastName}</div>
+                        <div style={{ fontSize: 11, color: 'var(--sand-500)' }}>{calcAge(c.patient.dob)}y</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: 'var(--sand-700)' }}>Dr. Chen</td>
+                  <td style={{ padding: '12px 16px', fontSize: 12, color: 'var(--sand-600)', maxWidth: 200 }}>
+                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {c.note?.assessment || '—'}
+                    </div>
+                  </td>
+                  <td style={{ padding: '12px 16px' }}>
+                    <Badge color="teal">{c.rxRequests?.length || 0} Rx</Badge>
+                  </td>
+                  <td style={{ padding: '12px 16px', fontSize: 12, color: 'var(--sand-500)' }}>{c.closedTime || formatDate()}</td>
+                  <td style={{ padding: '12px 16px' }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <Badge color="green">Complete</Badge>
+                      <Button variant="ghost" size="sm" style={{ fontSize: 11 }}>View / Addendum →</Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
+
+      {selectedVisit && (
+        <AddendumModal visit={selectedVisit} role={role} onClose={() => setSelectedVisit(null)} />
+      )}
+    </div>
+  );
+}
+
+// ─── COMMAND CENTER ──────────────────────────────────────────────────────────
+function CommandCenter({ careQueue, pharmacyQueue, completed, darkMode }) {
+  const [tick, setTick] = useState(0);
+  useEffect(() => { const t = setInterval(() => setTick(x => x + 1), 30000); return () => clearInterval(t); }, []);
+
+  const D = darkMode;
+  const col = {
+    bg: D ? '#141920' : 'var(--sand-100)',
+    card: D ? '#1E2533' : '#fff',
+    border: D ? '#2A3347' : 'var(--sand-200)',
+    text: D ? '#E2EAF4' : 'var(--sand-900)',
+    sub: D ? '#5A7090' : 'var(--sand-500)',
+    header: D ? '#0A0F1A' : 'var(--sand-900)',
+    colBg: D ? '#141920' : 'var(--sand-50)',
+  };
+
+  // Seed some demo patients for triage queue
+  const triageDemo = [
+    { patient: { firstName: 'Luis', lastName: 'Garcia', dob: '1988-05-10', gender: 'Male', allergies: [] }, checkInTime: Date.now() - 120000, triageInitials: 'TW', vitals: { chiefComplaint: 'Fever & cough' }, warnings: [] },
+    { patient: { firstName: 'Paula', lastName: 'Mora', dob: '2001-09-22', gender: 'Female', allergies: ['Aspirin'] }, checkInTime: Date.now() - 480000, triageInitials: 'JR', vitals: { chiefComplaint: 'Rash on arms' }, warnings: [] },
+  ];
+
+  const allCompleted = [
+    ...SEED_PATIENTS.flatMap(p => p.visits.map(v => ({ patient: p, provider: v.provider, date: v.date }))),
+    ...completed.map(c => ({ patient: c.patient, provider: 'Dr. Chen', date: 'Today' })),
+  ];
+
+  const metrics = [
+    { label: 'Avg Triage Wait', value: '8 min', color: '#5EC4B7' },
+    { label: 'Avg Care Wait', value: '22 min', color: '#5EC4B7' },
+    { label: 'Avg Pharmacy Wait', value: '12 min', color: '#5EC4B7' },
+    { label: 'Rx Fill Rate', value: '96%', color: '#5EC4B7' },
+    { label: 'Completed Today', value: String(allCompleted.length + 21), color: '#5EC4B7' },
+    { label: 'Active Patients', value: String(careQueue.length + pharmacyQueue.length + triageDemo.length), color: '#FBBF24' },
+  ];
+
+  const stages = [
+    { id: 'triage', label: 'TRIAGE', icon: '🏥', color: '#60A5FA', items: triageDemo },
+    { id: 'care', label: 'CARE', icon: '👨‍⚕️', color: '#5EC4B7', items: careQueue },
+    { id: 'pharmacy', label: 'PHARMACY', icon: '💊', color: '#FBBF24', items: pharmacyQueue },
+  ];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: col.bg }}>
+      {/* Top bar */}
+      <div style={{ background: col.header, borderBottom: `1px solid ${D ? 'rgba(255,255,255,0.06)' : 'var(--sand-200)'}`, padding: '12px 24px', display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0 }}>
+        <div>
+          <h2 style={{ fontSize: 16, fontWeight: 600, color: D ? '#fff' : 'var(--sand-50)', letterSpacing: '-0.01em' }}>Command Center</h2>
+          <div style={{ fontSize: 11, color: D ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.5)', marginTop: 1 }}>Guatemala Mission · May 1, 2026 · All queues live</div>
+        </div>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#5EC4B7', animation: 'pulse 2s infinite' }}></div>
+            <span style={{ fontSize: 11, color: D ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.6)' }}>Live</span>
+          </div>
+          <div style={{ background: 'rgba(94,196,183,0.15)', border: '1px solid rgba(94,196,183,0.3)', borderRadius: 99, padding: '3px 12px', fontSize: 11, color: '#5EC4B7', fontWeight: 500 }}>
+            {allCompleted.length + 21} Completed
+          </div>
+          <div style={{ background: 'rgba(251,191,36,0.15)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: 99, padding: '3px 12px', fontSize: 11, color: '#FBBF24', fontWeight: 500 }}>
+            {careQueue.length + pharmacyQueue.length + triageDemo.length} Active
+          </div>
+        </div>
+      </div>
+
+      {/* Three-column kanban */}
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', overflow: 'hidden', gap: 1, background: D ? 'rgba(255,255,255,0.04)' : 'var(--sand-200)' }}>
+        {stages.map(stage => (
+          <div key={stage.id} style={{ background: col.colBg, padding: '16px 14px', overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {/* Column header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexShrink: 0 }}>
+              <span style={{ fontSize: 14 }}>{stage.icon}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: D ? 'rgba(255,255,255,0.6)' : 'var(--sand-600)', letterSpacing: '0.06em' }}>{stage.label}</span>
+              <div style={{ marginLeft: 'auto', background: D ? '#1E2533' : 'var(--sand-200)', borderRadius: 99, padding: '2px 10px', fontSize: 11, color: stage.color, fontWeight: 600 }}>
+                {stage.items.length}
+              </div>
+            </div>
+
+            {/* Cards */}
+            {stage.items.length === 0 ? (
+              <div style={{ border: `1px dashed ${D ? 'rgba(255,255,255,0.08)' : 'var(--sand-300)'}`, borderRadius: 8, padding: '20px', textAlign: 'center' }}>
+                <span style={{ fontSize: 12, color: D ? 'rgba(255,255,255,0.2)' : 'var(--sand-400)' }}>Queue empty</span>
+              </div>
+            ) : (
+              stage.items.map((item, i) => {
+                const hasAllergy = item.patient?.allergies?.length > 0;
+                const waitMins = Math.floor((Date.now() - item.checkInTime) / 60000);
+                return (
+                  <div key={item.id || i} style={{
+                    background: D ? '#1E2533' : '#fff',
+                    border: `1px solid ${hasAllergy ? (D ? 'rgba(248,113,113,0.4)' : 'var(--red-200)') : (D ? '#2A3347' : 'var(--sand-200)')}`,
+                    borderLeft: `3px solid ${hasAllergy ? '#F87171' : stage.color}`,
+                    borderRadius: 8, padding: '10px 12px', transition: 'box-shadow 0.15s'
+                  }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 5 }}>
+                      <PhotoPlaceholder name={`${item.patient.firstName} ${item.patient.lastName}`} size={28} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: D ? '#E2EAF4' : 'var(--sand-900)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {item.patient.firstName} {item.patient.lastName}
+                        </div>
+                        <div style={{ fontSize: 10, color: D ? '#5A7090' : 'var(--sand-500)' }}>
+                          {calcAge(item.patient.dob)}y · {item.patient.gender}
+                        </div>
+                      </div>
+                      <span style={{ fontSize: 10, color: D ? '#3D4F68' : 'var(--sand-400)', flexShrink: 0 }}>{waitMins}m</span>
+                    </div>
+                    {item.vitals?.chiefComplaint && (
+                      <div style={{ fontSize: 11, color: D ? '#5A7090' : 'var(--sand-500)', paddingLeft: 36, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        "{item.vitals.chiefComplaint}"
+                      </div>
+                    )}
+                    {hasAllergy && (
+                      <div style={{ marginTop: 5, paddingLeft: 36, display: 'flex', gap: 4, alignItems: 'center' }}>
+                        <span style={{ fontSize: 10, color: '#F87171', fontWeight: 600 }}>⚠ {item.patient.allergies.join(', ')}</span>
+                      </div>
+                    )}
+                    {item.warnings?.length > 0 && (
+                      <div style={{ marginTop: 4, paddingLeft: 36 }}>
+                        <span style={{ fontSize: 10, color: '#FBBF24' }}>⚠ {item.warnings.join(' · ')}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+
+            {/* Empty state hint */}
+            {stage.items.length > 0 && (
+              <div style={{ border: `1px dashed ${D ? 'rgba(255,255,255,0.06)' : 'var(--sand-200)'}`, borderRadius: 8, padding: '10px', textAlign: 'center', flexShrink: 0 }}>
+                <span style={{ fontSize: 11, color: D ? 'rgba(255,255,255,0.15)' : 'var(--sand-300)' }}>+ patients arrive here</span>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Metrics strip */}
+      <div style={{ background: D ? '#0A0F1A' : 'var(--sand-900)', borderTop: `1px solid ${D ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.2)'}`, padding: '10px 24px', display: 'flex', gap: 0, alignItems: 'center', flexShrink: 0, overflow: 'auto' }}>
+        {metrics.map((m, i) => (
+          <div key={m.label} style={{ display: 'flex', alignItems: 'center', gap: 10, paddingRight: 24, marginRight: 24, borderRight: i < metrics.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none', flexShrink: 0 }}>
+            <span style={{ fontSize: 18, fontWeight: 700, color: m.color, fontFamily: 'var(--font-mono)' }}>{m.value}</span>
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', lineHeight: 1.3 }}>{m.label}</span>
+          </div>
+        ))}
+        <div style={{ marginLeft: 'auto', fontSize: 10, color: 'rgba(255,255,255,0.2)', flexShrink: 0 }}>Last updated: {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── OVERVIEW (Command Center + Dashboard) ───────────────────────────────────
+function OverviewView({ careQueue, pharmacyQueue, completed, darkMode }) {
+  const recentVisits = [
+    { name: 'Maria Santos', provider: 'Dr. Chen', pharmacy: 'M. Flores', rx: '2/2', duration: '32 min' },
+    { name: 'Carlos Mendez', provider: 'Dr. Patel', pharmacy: 'M. Flores', rx: '1/1', duration: '18 min' },
+    { name: 'Ana Reyes', provider: 'Dr. Chen', pharmacy: 'M. Flores', rx: '3/3', duration: '41 min' },
+  ];
+  return (
+    <div style={{ background: 'var(--sand-100)', minHeight: '100%' }}>
+      {/* ── Command Center (live queues) ── */}
+      <div style={{ height: 640, display: 'flex', flexDirection: 'column' }}>
+        <CommandCenter careQueue={careQueue} pharmacyQueue={pharmacyQueue} completed={completed} darkMode={darkMode} />
+      </div>
+
+      {/* ── Dashboard (historical / summary) ── */}
+      <div style={{ padding: '32px 24px', maxWidth: 1200, margin: '0 auto' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 20 }}>
+          <h1 style={{ fontSize: 20, fontWeight: 600, color: 'var(--sand-900)', letterSpacing: '-0.01em' }}>Today's Summary</h1>
+          <span style={{ fontSize: 12, color: 'var(--sand-500)' }}>{formatDate()} · Clinic A</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 24 }}>
+          {[
+            ['Completed Today', '24', 'teal'],
+            ['In Progress', String(careQueue.length + pharmacyQueue.length), 'amber'],
+            ['Rx Fill Rate', '96%', 'teal'],
+            ['Avg Wait', '14 min', 'sand'],
+          ].map(([l, v, color]) => (
+            <Card key={l} style={{ padding: '20px' }}>
+              <div style={{ fontSize: 28, fontWeight: 700, color: color === 'teal' ? 'var(--teal-500)' : color === 'amber' ? 'var(--amber-600)' : 'var(--sand-700)' }}>{v}</div>
+              <div style={{ fontSize: 13, color: 'var(--sand-500)', marginTop: 4 }}>{l}</div>
+            </Card>
+          ))}
+        </div>
+        <Card style={{ padding: '24px' }}>
+          <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 14, color: 'var(--sand-700)' }}>Recent Completed Visits</h3>
+          {recentVisits.map((r, i) => (
+            <div key={i} style={{ display: 'flex', gap: 16, padding: '12px 0', borderBottom: i < recentVisits.length - 1 ? '1px solid var(--sand-100)' : 'none', alignItems: 'center' }}>
+              <PhotoPlaceholder name={r.name} size={36} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 500 }}>{r.name}</div>
+                <div style={{ fontSize: 12, color: 'var(--sand-500)' }}>{r.provider} · {r.pharmacy}</div>
+              </div>
+              <Badge color="teal">Rx {r.rx}</Badge>
+              <span style={{ fontSize: 12, color: 'var(--sand-500)' }}>{r.duration}</span>
+              <Badge color="green">Complete</Badge>
+            </div>
+          ))}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ─── MAIN APP ─────────────────────────────────────────────────────────────────
+function App() {
+  const [role, setRole] = useState('Triage');
+  const [activeView, setActiveView] = useState('search');
+  const [patients, setPatients] = useState(SEED_PATIENTS);
+  const [careQueue, setCareQueue] = useState([]);
+  const [pharmacyQueue, setPharmacyQueue] = useState([]);
+  const [completed, setCompleted] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [trip] = useState(SEED_TRIP);
+
+  // Current active patient being treated (by role)
+  const [activeTriagePatient, setActiveTriagePatient] = useState(null);
+  const [triageStep, setTriageStep] = useState('search'); // search | new | vitals
+  const [activeCarePatient, setActiveCarePatient] = useState(null);
+  const [activePharmacyPatient, setActivePharmacyPatient] = useState(null);
+
+  // Tweaks
+  const { tweaks, setTweak } = useTweaks(TWEAK_DEFAULTS);
+  const darkMode = tweaks?.darkMode || false;
+
+  // Apply dark mode to body
+  useEffect(() => {
+    document.body.classList.toggle('dark-mode', darkMode);
+  }, [darkMode]);
+
+  // ── TRIAGE FLOW ──
+  const handleTriageSelect = (patient) => {
+    setActiveTriagePatient(patient);
+    setTriageStep('vitals');
+  };
+
+  const handleNewPatient = () => setTriageStep('new');
+
+  const handleNewPatientComplete = (patientData) => {
+    if (!patientData) { setTriageStep('search'); return; }
+    const newP = { ...patientData };
+    setPatients(p => [...p, newP]);
+    setActiveTriagePatient(newP);
+    setTriageStep('vitals');
+  };
+
+  const handleCheckIn = (vitalsData) => {
+    const queueItem = {
+      id: 'Q' + Date.now(),
+      patient: activeTriagePatient,
+      vitals: vitalsData.vitals,
+      checkInTime: Date.now(),
+      triageInitials: 'JR',
+      warnings: [],
+      rxRequests: [],
+    };
+    if (vitalsData.vitals.spo2 && parseFloat(vitalsData.vitals.spo2) < 90) queueItem.warnings.push('Low SpO2');
+    if (vitalsData.vitals.hr && parseInt(vitalsData.vitals.hr) > 120) queueItem.warnings.push('Tachycardia');
+    setCareQueue(q => [...q, queueItem]);
+    setActiveTriagePatient(null);
+    setTriageStep('search');
+    setActiveView('search');
+  };
+
+  // ── PROVIDER FLOW ──
+  const handleAssumePatient = (item) => {
+    setActiveCarePatient(item);
+  };
+
+  const handleProviderClose = (item, sendToPharmacy, data) => {
+    setCareQueue(q => q.filter(x => x.id !== item.id));
+    if (sendToPharmacy && data) {
+      const pharmItem = { ...item, ...data, provider: 'Dr. Chen' };
+      setPharmacyQueue(q => [...q, pharmItem]);
+    } else {
+      setCompleted(c => [...c, item]);
+    }
+    setActiveCarePatient(null);
+  };
+
+  const handleSendToPharmacy = (data) => {
+    handleProviderClose(activeCarePatient, true, data);
+  };
+
+  // ── PHARMACY FLOW ──
+  const handlePharmacyAssume = (item) => {
+    setActivePharmacyPatient(item);
+  };
+
+  const handlePharmacyClose = (item) => {
+    setPharmacyQueue(q => q.filter(x => x.id !== item.id));
+    setCompleted(c => [...c, item]);
+    setActivePharmacyPatient(null);
+  };
+
+  // Determine what to render
+  const renderMain = () => {
+    // TRIAGE
+    if (role === 'Triage') {
+      if (triageStep === 'new') return <NewPatientForm onComplete={handleNewPatientComplete} />;
+      if (triageStep === 'vitals' && activeTriagePatient) {
+        return <VitalsForm patient={activeTriagePatient} onComplete={handleCheckIn} />;
+      }
+      if (activeView === 'checkins') {
+        return (
+          <div style={{ padding: '24px', maxWidth: 700, margin: '0 auto' }}>
+            <h1 style={{ fontSize: 22, fontWeight: 600, marginBottom: 20 }}>Checked In Today</h1>
+            {careQueue.length === 0 ? (
+              <Card style={{ padding: '48px', textAlign: 'center', color: 'var(--sand-400)' }}>No patients checked in yet</Card>
+            ) : (
+              careQueue.map((item, i) => (
+                <Card key={item.id} style={{ padding: '16px 20px', marginBottom: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <PhotoPlaceholder name={`${item.patient.firstName} ${item.patient.lastName}`} size={40} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600 }}>{item.patient.firstName} {item.patient.lastName}</div>
+                      <div style={{ fontSize: 13, color: 'var(--sand-500)' }}>{minutesAgo(item.checkInTime)}</div>
+                    </div>
+                    <Badge color="teal">In Care Queue</Badge>
+                  </div>
+                </Card>
+              ))
+            )}
+          </div>
+        );
+      }
+      return <TriageSearch patients={patients} onCheckIn={handleTriageSelect} onNewPatient={handleNewPatient} />;
+    }
+
+    // PROVIDER
+    if (role === 'Provider') {
+      if (activeCarePatient) {
+        return <SOAPPView item={activeCarePatient} onClose={(direct) => handleProviderClose(activeCarePatient, !direct, null)} onSendToPharmacy={handleSendToPharmacy} />;
+      }
+      if (activeView === 'completed') return <CompletedDashboard completed={completed} role={role} />;
+      return <CareQueue queue={careQueue} onAssume={handleAssumePatient} />;
+    }
+
+    // PHARMACY
+    if (role === 'Pharmacy') {
+      if (activePharmacyPatient) {
+        return <PharmacyFulfillment item={activePharmacyPatient} onClose={handlePharmacyClose} />;
+      }
+      if (activeView === 'completed') return <CompletedDashboard completed={completed} role={role} />;
+      return <PharmacyView queue={pharmacyQueue} onAssume={handlePharmacyAssume} />;
+    }
+
+    // MANAGER
+    if (activeView === 'overview') return <OverviewView careQueue={careQueue} pharmacyQueue={pharmacyQueue} completed={completed} darkMode={darkMode} />;
+    return <ManagerView trip={trip} activeView={activeView} />;
+  };
+
+  return (
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--sand-100)' }}>
+      <Sidebar role={role} setRole={(r) => { setRole(r); setActiveCarePatient(null); setActivePharmacyPatient(null); setActiveTriagePatient(null); setTriageStep('search'); }}
+        activeView={activeView} setView={setActiveView} trip={trip} notifications={notifications}
+        darkMode={darkMode} onToggleDark={() => setTweak('darkMode', !darkMode)} />
+      <div style={{ flex: 1, overflow: 'auto' }}>
+        {renderMain()}
+      </div>
+
+      <TweaksPanel tweaks={tweaks} setTweak={setTweak}>
+        <TweakSection title="Appearance">
+          <TweakToggle id="darkMode" label="Dark Mode" />
+          <TweakRadio id="density" label="Density" options={[{ value: 'compact', label: 'Compact' }, { value: 'comfortable', label: 'Comfy' }, { value: 'spacious', label: 'Spacious' }]} />
+        </TweakSection>
+        <TweakSection title="Quick Demo">
+          <TweakButton label="Add Patient to Care Queue" onClick={() => {
+            setCareQueue(q => [...q, {
+              id: 'Q' + Date.now(),
+              patient: SEED_PATIENTS[0],
+              vitals: { bpSys: '142', bpDia: '88', hr: '88', rr: '18', temp: '99.2', tempUnit: '°F', weight: '62', weightUnit: 'kg', height: '162', heightUnit: 'cm', spo2: '97', chiefComplaint: 'Persistent headache and dizziness' },
+              checkInTime: Date.now() - 600000,
+              triageInitials: 'JR',
+              warnings: [],
+              rxRequests: [],
+            }]);
+          }} />
+          <TweakButton label="Add Patient to Pharmacy Queue" onClick={() => {
+            setPharmacyQueue(q => [...q, {
+              id: 'PQ' + Date.now(),
+              patient: SEED_PATIENTS[2],
+              vitals: { bpSys: '118', bpDia: '76', hr: '72', spo2: '99', chiefComplaint: 'Joint pain' },
+              checkInTime: Date.now() - 900000,
+              provider: 'Dr. Patel',
+              note: { subjective: 'Joint pain for 3 days', objective: 'Mild tenderness', assessment: 'Viral arthralgia', plan: 'Rest and analgesics' },
+              rxRequests: [
+                { id: 1, name: 'Acetaminophen', dose: '500', unit: 'mg', route: 'Oral', sig: 'Q6H PRN pain', notes: 'Avoid NSAIDs — allergy' },
+                { id: 2, name: 'Ibuprofen', dose: '400', unit: 'mg', route: 'Oral', sig: 'TID with food', notes: '' }
+              ],
+            }]);
+          }} />
+        </TweakSection>
+      </TweaksPanel>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</script>
+</body>
+</html>
