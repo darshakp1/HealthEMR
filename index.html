@@ -62,13 +62,51 @@
     --shadow-md: 0 4px 12px rgba(44,36,25,0.10);
     --shadow-lg: 0 8px 32px rgba(44,36,25,0.12);
   }
-  html, body, #root { height: 100%; overflow: hidden; }
+  /* 100vh is wrong on mobile — it ignores the collapsing browser chrome.
+     --app-h upgrades to dynamic viewport height where supported. */
+  :root { --app-h: 100vh; }
+  @supports (height: 100dvh) { :root { --app-h: 100dvh; } }
+
+  html, body, #root { height: 100%; height: var(--app-h); overflow: hidden; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { -webkit-tap-highlight-color: transparent; }
   body { font-family: var(--font-body); background: var(--sand-100); color: var(--sand-900); }
   
   /* Scrollbar */
   ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--sand-300); border-radius: 99px; }
+
+  /* Responsive grids — columns collapse as the viewport narrows */
+  .g2 { display: grid; grid-template-columns: 1fr 1fr; }
+  .g3 { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .g4 { display: grid; grid-template-columns: repeat(4, 1fr); }
+  .g-med { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; }
+  .g-rx  { display: grid; grid-template-columns: 2fr 1fr 1fr auto; }
+  .g-vol { display: grid; grid-template-columns: 1fr 1fr 1fr auto; }
+
+  /* Wide content scrolls inside its own box rather than the page */
+  .scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  @media (max-width: 1080px) {
+    /* these live inside the note / fulfillment pane, which is far narrower
+       than the viewport, so they step down earlier */
+    .g-med, .g-rx, .g3 { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 900px) {
+    .g4 { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 640px) {
+    .g2, .g3, .g-med, .g-rx, .g-vol { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 420px) {
+    .g4 { grid-template-columns: 1fr; }
+  }
+
+  /* iOS zooms the page when a focused field is under 16px */
+  @media (max-width: 768px) {
+    input, select, textarea { font-size: 16px !important; }
+  }
 
   /* Animations */
   @keyframes slideIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
@@ -133,7 +171,7 @@
 <script type="text/babel">
 // ─── TWEAKS PANEL ─────────────────────────────────────────────────────────────
 const __TWEAKS_STYLE = `
-  .twk-panel{position:fixed;right:16px;bottom:16px;z-index:2147483646;width:280px;
+  .twk-panel{position:fixed;right:16px;bottom:16px;z-index:2147483646;width:min(280px,calc(100vw - 32px));
     max-height:calc(100vh - 32px);display:flex;flex-direction:column;
     transform:scale(var(--dc-inv-zoom,1));transform-origin:bottom right;
     background:rgba(250,249,247,.78);color:#29261b;
@@ -543,6 +581,28 @@ function patientName(p) {
   return [p.firstName, p.lastName, p.extensionName].filter(Boolean).join(' ');
 }
 
+// ─── VIEWPORT ─────────────────────────────────────────────────────────────────
+// Layouts that can't be expressed in CSS alone (the sidebar, the two-pane
+// chart views) branch on this instead.
+const MOBILE_BREAKPOINT = 768;
+// Side-by-side chart + workspace needs more room than the shell does.
+const TWO_PANE_BREAKPOINT = 1024;
+
+function useIsMobile(breakpoint = MOBILE_BREAKPOINT) {
+  const [isMobile, setIsMobile] = React.useState(() => window.innerWidth <= breakpoint);
+  React.useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= breakpoint);
+    onResize();
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
+    };
+  }, [breakpoint]);
+  return isMobile;
+}
+
 // ─── DENSITY ──────────────────────────────────────────────────────────────────
 // The density tweak scales the px spacing inside Cards, which is where nearly
 // all of the app's whitespace lives.
@@ -801,6 +861,33 @@ function useReportDirty(dirty, onDirtyChange) {
   }, [onDirtyChange]);
 }
 
+// On phones the patient chart collapses behind this bar so the working pane
+// keeps the screen.
+function PatientChartToggle({ patient, open, onToggle }) {
+  return (
+    <button onClick={onToggle} style={{
+      flexShrink: 0, width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+      padding: '10px 14px', background: '#fff', border: 'none',
+      borderBottom: '1px solid var(--sand-200)', cursor: 'pointer',
+      fontFamily: 'var(--font-body)', textAlign: 'left'
+    }}>
+      <PhotoPlaceholder name={patientName(patient)} size={34} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--sand-900)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {patientName(patient)}
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--sand-500)' }}>
+          {calcAge(patient.dob)}y · {patient.gender}
+        </div>
+      </div>
+      {patient.allergies?.length > 0 && <Badge color="red">⚠ Allergies</Badge>}
+      <span style={{ fontSize: 12, color: 'var(--sand-500)', whiteSpace: 'nowrap' }}>
+        {open ? 'Hide chart ▲' : 'Chart ▼'}
+      </span>
+    </button>
+  );
+}
+
 function ConfirmDiscardModal({ onCancel, onDiscard }) {
   return (
     <div className="fade-in" onClick={onCancel} style={{
@@ -823,7 +910,7 @@ function ConfirmDiscardModal({ onCancel, onDiscard }) {
             </p>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 22 }}>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 22, flexWrap: 'wrap' }}>
           <Button variant="secondary" onClick={onCancel}>Keep Editing</Button>
           <Button variant="danger" onClick={onDiscard}>Discard &amp; Leave</Button>
         </div>
@@ -862,7 +949,7 @@ function VisitDetailModal({ visit, patient, onClose }) {
           {visit.vitals && (
             <div style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--sand-500)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8 }}>Vitals</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+              <div className="g4" style={{ gap: 6 }}>
                 {Object.entries(visit.vitals).map(([k, v]) => (
                   <div key={k} style={{ background: '#fff', padding: '6px 8px', borderRadius: 6, border: '1px solid var(--sand-200)' }}>
                     <div style={{ fontSize: 10, color: 'var(--sand-400)', textTransform: 'uppercase' }}>{k}</div>
@@ -925,11 +1012,14 @@ function Sidebar({ role, setRole, activeView, setView, trip, notifications, dark
     Manager: [{ id: 'overview', label: 'Overview', icon: '⚡' }, { id: 'trip', label: 'Trip Config', icon: '🗺' }, { id: 'roster', label: 'Volunteer Roster', icon: '👥' }],
   };
 
-  return (
-    <div style={{
-      width: 220, background: 'var(--sand-900)', display: 'flex', flexDirection: 'column',
-      height: '100%', flexShrink: 0
-    }}>
+  const isMobile = useIsMobile();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // On mobile every nav action also dismisses the drawer.
+  const pick = (fn) => (...args) => { setDrawerOpen(false); fn(...args); };
+
+  const body = (
+    <React.Fragment>
       {/* Logo */}
       <div style={{ padding: '20px 18px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <div style={{ fontSize: 18, fontWeight: 600, color: '#fff', letterSpacing: '-0.02em' }}>
@@ -939,13 +1029,13 @@ function Sidebar({ role, setRole, activeView, setView, trip, notifications, dark
       </div>
 
       {/* Role Switcher */}
-      <div style={{ padding: '12px 12px 8px' }}>
+      <div style={{ padding: '12px 12px 8px', flexShrink: 0 }}>
         <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6, paddingLeft: 6 }}>
           Role
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {roles.map(r => (
-            <button key={r} onClick={() => setRole(r, navItems[r][0].id)}
+            <button key={r} onClick={() => pick(setRole)(r, navItems[r][0].id)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px',
                 borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer', textAlign: 'left',
@@ -970,7 +1060,7 @@ function Sidebar({ role, setRole, activeView, setView, trip, notifications, dark
           Navigation
         </div>
         {(navItems[role] || []).map(item => (
-          <button key={item.id} onClick={() => setView(item.id)}
+          <button key={item.id} onClick={() => pick(setView)(item.id)}
             style={{
               display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', width: '100%',
               borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer', textAlign: 'left',
@@ -1028,7 +1118,60 @@ function Sidebar({ role, setRole, activeView, setView, trip, notifications, dark
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{role}</div>
         </div>
       </div>
-    </div>
+    </React.Fragment>
+  );
+
+  const shell = {
+    background: 'var(--sand-900)', display: 'flex', flexDirection: 'column',
+    overflowY: 'auto', WebkitOverflowScrolling: 'touch',
+  };
+
+  // ── Desktop: a fixed rail ──
+  if (!isMobile) {
+    return <div style={{ ...shell, width: 220, height: '100%', flexShrink: 0 }}>{body}</div>;
+  }
+
+  // ── Mobile: a top bar plus an off-canvas drawer ──
+  return (
+    <React.Fragment>
+      <div style={{
+        flexShrink: 0, background: 'var(--sand-900)', display: 'flex', alignItems: 'center',
+        gap: 12, padding: '10px 14px', borderBottom: '1px solid rgba(255,255,255,0.08)'
+      }}>
+        <button onClick={() => setDrawerOpen(true)} aria-label="Open navigation"
+          style={{
+            background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 'var(--radius-sm)',
+            color: '#fff', fontSize: 18, lineHeight: 1, cursor: 'pointer',
+            width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+          }}>☰</button>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: '#fff', letterSpacing: '-0.02em' }}>
+            Mission<span style={{ color: '#5EC4B7' }}>EMR</span>
+          </div>
+          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {trip.name}
+          </div>
+        </div>
+        <div style={{
+          marginLeft: 'auto', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6,
+          background: 'rgba(94,196,183,0.18)', color: '#5EC4B7', borderRadius: 99,
+          padding: '5px 12px', fontSize: 12, fontWeight: 600
+        }}>
+          <span>{ROLE_CONFIG[role].icon}</span><span>{role}</span>
+        </div>
+      </div>
+
+      {drawerOpen && (
+        <div className="fade-in" onClick={() => setDrawerOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(20,16,10,0.55)', zIndex: 150 }} />
+      )}
+      <div style={{
+        ...shell, position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 151,
+        width: 'min(78vw, 260px)', boxShadow: drawerOpen ? '4px 0 24px rgba(0,0,0,0.3)' : 'none',
+        transform: drawerOpen ? 'translateX(0)' : 'translateX(-100%)',
+        transition: 'transform 0.22s ease', visibility: drawerOpen ? 'visible' : 'hidden'
+      }}>{body}</div>
+    </React.Fragment>
   );
 }
 
@@ -1108,15 +1251,15 @@ function PatientSearchCard({ patient, onSelect }) {
 
   return (
     <Card onClick={onSelect} style={{ padding: '16px 20px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
         <PhotoPlaceholder name={patientName(patient)} size={48} />
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+        <div style={{ flex: '1 1 150px', minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 15, fontWeight: 600 }}>{patientName(patient)}</span>
             {patient.allergies.length > 0 && <Badge color="red">⚠ Allergies</Badge>}
             {patient.visits.length > 0 && <Badge color="teal">Returning</Badge>}
           </div>
-          <div style={{ fontSize: 13, color: 'var(--sand-600)', display: 'flex', gap: 16 }}>
+          <div style={{ fontSize: 13, color: 'var(--sand-600)', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
             <span>DOB: {patient.dob} · {age}y</span>
             {patient.phone && <span>📱 {patient.phone}</span>}
             {lastVisit && <span>Last visit: {lastVisit}</span>}
@@ -1160,7 +1303,7 @@ function NewPatientForm({ onComplete, onDirtyChange }) {
       </div>
 
       <Card style={{ padding: '24px', marginBottom: 16 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div className="g2" style={{ gap: 16 }}>
           <Input label="First Name" value={form.firstName} onChange={v => set('firstName', v)} required />
           <Input label="Last Name" value={form.lastName} onChange={v => set('lastName', v)} required />
           <Input label="Extension Name" value={form.extensionName} onChange={v => set('extensionName', v)}
@@ -1337,7 +1480,7 @@ function VitalsForm({ patient, onComplete, onDirtyChange }) {
 
       <Card style={{ padding: '24px', marginBottom: 16 }}>
         <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--sand-800)', marginBottom: 16 }}>Vitals</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div className="g2" style={{ gap: 14 }}>
           <div style={{ display: 'flex', gap: 8 }}>
             <Input label="Systolic BP" value={vitals.bpSys} onChange={v => setV('bpSys', v)} placeholder="120" unit="mmHg" />
             <Input label="Diastolic BP" value={vitals.bpDia} onChange={v => setV('bpDia', v)} placeholder="80" unit="mmHg" />
@@ -1437,21 +1580,21 @@ function QueueCard({ item, index, expanded, onToggle, onAssume, actionLabel, sho
 
   return (
     <Card style={{ overflow: 'visible' }}>
-      <div style={{ padding: pad, display: 'flex', alignItems: 'center', gap: 14, cursor: onToggle ? 'pointer' : 'default' }}
+      <div style={{ padding: pad, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', cursor: onToggle ? 'pointer' : 'default' }}
         onClick={onToggle || undefined}>
         {/* Position */}
         <div style={{ width: 28, height: 28, borderRadius: '50%', background: index === 0 ? 'var(--accent)' : 'var(--sand-200)',
           color: index === 0 ? '#fff' : 'var(--sand-600)', display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{index + 1}</div>
         <PhotoPlaceholder name={patientName(item.patient)} size={44} />
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-            <span style={{ fontSize: 15, fontWeight: 600 }}>{patientName(item.patient)}</span>
+        <div style={{ flex: '1 1 150px', minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 15, fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{patientName(item.patient)}</span>
             <span style={{ fontSize: 13, color: 'var(--sand-500)' }}>{age}y · {item.patient.gender}</span>
             {hasAllergies && <Badge color="red">⚠ Allergies</Badge>}
             {item.patient.visits.length > 0 && <Badge color="teal">Returning</Badge>}
           </div>
-          <div style={{ fontSize: 13, color: 'var(--sand-600)' }}>
+          <div style={{ fontSize: 13, color: 'var(--sand-600)', minWidth: 0, overflowWrap: 'anywhere' }}>
             <span style={{ marginRight: 12 }}>🕐 {minutesAgo(item.checkInTime)}</span>
             <span style={{ marginRight: 12 }}>👤 Triage: {item.triageInitials}</span>
             {item.vitals?.chiefComplaint && <span>"{item.vitals.chiefComplaint}"</span>}
@@ -1466,7 +1609,7 @@ function QueueCard({ item, index, expanded, onToggle, onAssume, actionLabel, sho
       </div>
 
       {expanded && (
-        <div className="animate-in" style={{ borderTop: '1px solid var(--sand-100)', padding: pad, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div className="animate-in g2" style={{ borderTop: '1px solid var(--sand-100)', padding: pad, gap: 16 }}>
           {/* Vitals summary */}
           <div>
             <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--sand-600)', marginBottom: 8 }}>VITALS</div>
@@ -1521,6 +1664,8 @@ function SOAPPView({ item, onClose, onSendToPharmacy, onDirtyChange }) {
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [vitals, setVitals] = useState(item.vitals || {});
   const [vitalsDraft, setVitalsDraft] = useState(null);
+  const isMobile = useIsMobile(TWO_PANE_BREAKPOINT);
+  const [chartOpen, setChartOpen] = useState(false);
 
   const setN = (k, v) => setNote(n => ({ ...n, [k]: v }));
 
@@ -1561,9 +1706,19 @@ function SOAPPView({ item, onClose, onSendToPharmacy, onDirtyChange }) {
   ];
 
   return (
-    <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: '100%', overflow: 'hidden' }}>
+      {isMobile && (
+        <PatientChartToggle patient={item.patient} open={chartOpen} onToggle={() => setChartOpen(o => !o)} />
+      )}
       {/* Left pane — patient info */}
-      <div style={{ width: 280, background: 'var(--sand-50)', borderRight: '1px solid var(--sand-200)', display: 'flex', flexDirection: 'column', overflow: 'hidden', flexShrink: 0 }}>
+      <div style={{
+        width: isMobile ? '100%' : 280, background: 'var(--sand-50)',
+        borderRight: isMobile ? 'none' : '1px solid var(--sand-200)',
+        borderBottom: isMobile ? '1px solid var(--sand-200)' : 'none',
+        display: isMobile && !chartOpen ? 'none' : 'flex', flexDirection: 'column',
+        overflow: isMobile ? 'auto' : 'hidden',
+        maxHeight: isMobile ? '55vh' : undefined, flexShrink: 0
+      }}>
         <div style={{ padding: '20px 18px', borderBottom: '1px solid var(--sand-200)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
             <PhotoPlaceholder name={patientName(item.patient)} size={52} />
@@ -1670,7 +1825,7 @@ function SOAPPView({ item, onClose, onSendToPharmacy, onDirtyChange }) {
       {/* Right pane — documentation */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Top bar */}
-        <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--sand-200)', display: 'flex', alignItems: 'center', gap: 16, background: '#fff' }}>
+        <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--sand-200)', display: 'flex', alignItems: 'center', gap: 16, background: '#fff', flexWrap: 'wrap', flexShrink: 0 }}>
           <div style={{ display: 'flex', gap: 2 }}>
             {[
               { id: 'soapp', label: 'SOAPP Note' },
@@ -1727,7 +1882,7 @@ function SOAPPView({ item, onClose, onSendToPharmacy, onDirtyChange }) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {adminMeds.map(med => (
                     <Card key={med.id} style={{ padding: '14px 16px' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto', gap: 10, alignItems: 'end' }}>
+                      <div className="g-med" style={{ gap: 10, alignItems: 'end' }}>
                         <Input label="Medication / Vaccine" value={med.name} onChange={v => updateMed(med.id, 'name', v)} placeholder="Name or search..." />
                         <Input label="Dose" value={med.dose} onChange={v => updateMed(med.id, 'dose', v)} placeholder="500" unit={med.unit} />
                         <Select label="Route" value={med.route} onChange={v => updateMed(med.id, 'route', v)} options={[
@@ -1766,7 +1921,7 @@ function SOAPPView({ item, onClose, onSendToPharmacy, onDirtyChange }) {
                             ⚠️ Allergy conflict detected — verify before dispensing
                           </div>
                         )}
-                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 10, alignItems: 'end', marginBottom: 10 }}>
+                        <div className="g-rx" style={{ gap: 10, alignItems: 'end', marginBottom: 10 }}>
                           <Input label="Medication" value={rx.name} onChange={v => updateRx(rx.id, 'name', v)} placeholder="Medication name..." />
                           <Input label="Dose" value={rx.dose} onChange={v => updateRx(rx.id, 'dose', v)} placeholder="500" unit={rx.unit} />
                           <Select label="Route" value={rx.route} onChange={v => updateRx(rx.id, 'route', v)} options={[
@@ -1775,7 +1930,7 @@ function SOAPPView({ item, onClose, onSendToPharmacy, onDirtyChange }) {
                           ]} />
                           <button onClick={() => removeRx(rx.id)} style={{ background: 'none', border: 'none', color: 'var(--red-400)', cursor: 'pointer', fontSize: 16, paddingBottom: 2 }}>✕</button>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                        <div className="g2" style={{ gap: 10 }}>
                           <Input label="Sig / Instructions" value={rx.sig} onChange={v => updateRx(rx.id, 'sig', v)} placeholder="e.g. Take with food, once daily..." />
                           <Input label="Notes to Pharmacist" value={rx.notes} onChange={v => updateRx(rx.id, 'notes', v)} placeholder="Optional clinical context..." />
                         </div>
@@ -1789,7 +1944,7 @@ function SOAPPView({ item, onClose, onSendToPharmacy, onDirtyChange }) {
         </div>
 
         {/* Bottom action bar */}
-        <div style={{ padding: '14px 20px', borderTop: '1px solid var(--sand-200)', background: '#fff', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ padding: '14px 20px', borderTop: '1px solid var(--sand-200)', background: '#fff', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', flexShrink: 0 }}>
           <Button variant="ghost" size="sm" onClick={() => {}}>Discharge Patient</Button>
           <div style={{ flex: 1 }}></div>
           <Button variant="secondary" onClick={() => onClose(false, vitals)}>Close Visit Directly</Button>
@@ -1846,6 +2001,8 @@ function PharmacyFulfillment({ item, onClose, onDirtyChange }) {
     item.rxRequests.map(rx => ({ ...rx, status: 'pending', qty: '', reason: '', freq: 'once_daily', reminder: false }))
   );
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const isMobile = useIsMobile(TWO_PANE_BREAKPOINT);
+  const [chartOpen, setChartOpen] = useState(false);
 
   const updateStatus = (id, updates) => {
     setRxStatus(s => s.map(r => r.id === id ? { ...r, ...updates } : r));
@@ -1860,9 +2017,18 @@ function PharmacyFulfillment({ item, onClose, onDirtyChange }) {
   const hasAllergyConflict = (rx) => item.patient.allergies.some(a => rx.name.toLowerCase().includes(a.toLowerCase()));
 
   return (
-    <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: '100%', overflow: 'hidden' }}>
+      {isMobile && (
+        <PatientChartToggle patient={item.patient} open={chartOpen} onToggle={() => setChartOpen(o => !o)} />
+      )}
       {/* Left: Patient info */}
-      <div style={{ width: 300, background: 'var(--sand-50)', borderRight: '1px solid var(--sand-200)', display: 'flex', flexDirection: 'column', overflow: 'auto', flexShrink: 0 }}>
+      <div style={{
+        width: isMobile ? '100%' : 300, background: 'var(--sand-50)',
+        borderRight: isMobile ? 'none' : '1px solid var(--sand-200)',
+        borderBottom: isMobile ? '1px solid var(--sand-200)' : 'none',
+        display: isMobile && !chartOpen ? 'none' : 'flex', flexDirection: 'column',
+        overflow: 'auto', maxHeight: isMobile ? '55vh' : undefined, flexShrink: 0
+      }}>
         <div style={{ padding: '20px 18px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
             <PhotoPlaceholder name={patientName(item.patient)} size={52} />
@@ -1976,7 +2142,7 @@ function PharmacyFulfillment({ item, onClose, onDirtyChange }) {
                   </div>
 
                   {rx.status === 'filled' && (
-                    <div className="animate-in" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginTop: 10 }}>
+                    <div className="animate-in g3" style={{ gap: 10, marginTop: 10 }}>
                       <Input label="Qty Dispensed" value={rx.qty} onChange={v => updateStatus(rx.id, { qty: v })} placeholder="e.g. 10 tablets" />
                       <Select label="Frequency" value={rx.freq} onChange={v => updateStatus(rx.id, { freq: v })} options={[
                         { value: 'once_daily', label: 'Once daily' },
@@ -2008,7 +2174,7 @@ function PharmacyFulfillment({ item, onClose, onDirtyChange }) {
         </div>
 
         {/* Close bar */}
-        <div style={{ padding: '14px 20px', borderTop: '1px solid var(--sand-200)', background: '#fff', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ padding: '14px 20px', borderTop: '1px solid var(--sand-200)', background: '#fff', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', flexShrink: 0 }}>
           <span style={{ fontSize: 13, color: allAddressed ? 'var(--teal-600)' : 'var(--sand-500)' }}>
             {allAddressed ? '✓ All prescriptions addressed' : `${rxStatus.filter(r => r.status === 'pending').length} prescription(s) pending`}
           </span>
@@ -2042,7 +2208,7 @@ function ManagerView({ trip, activeView }) {
         <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--sand-900)', marginBottom: 24 }}>Trip Configuration</h1>
         <Card style={{ padding: '24px', marginBottom: 20 }}>
           <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: 'var(--sand-700)' }}>Trip Details</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div className="g2" style={{ gap: 14 }}>
             <Input label="Trip Name" value={trip.name} onChange={() => {}} />
             <Input label="Location" value={trip.location} onChange={() => {}} />
             <Input label="Start Date" value="2026-05-01" type="date" onChange={() => {}} />
@@ -2068,7 +2234,7 @@ function ManagerView({ trip, activeView }) {
     return (
       <div style={{ padding: '32px 24px', maxWidth: 900, margin: '0 auto' }}>
         <h1 style={{ fontSize: 22, fontWeight: 600, marginBottom: 24 }}>Dashboard</h1>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 14, marginBottom: 24 }}>
+        <div className="g4" style={{ gap: 14, marginBottom: 24 }}>
           {[
             ['Completed Today', '24', 'teal'],
             ['In Progress', '3', 'amber'],
@@ -2113,7 +2279,7 @@ function ManagerView({ trip, activeView }) {
 
       {showAdd && (
         <Card style={{ padding: '20px', marginBottom: 16, border: '1.5px solid var(--teal-300)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 12, alignItems: 'end' }}>
+          <div className="g-vol" style={{ gap: 12, alignItems: 'end' }}>
             <Input label="Name" value={newVol.name} onChange={v => setNewVol(n => ({ ...n, name: v }))} required />
             <Input label="Email" value={newVol.email} onChange={v => setNewVol(n => ({ ...n, email: v }))} required />
             <Select label="Role" value={newVol.role} onChange={v => setNewVol(n => ({ ...n, role: v }))} options={[
@@ -2129,7 +2295,8 @@ function ManagerView({ trip, activeView }) {
       )}
 
       <Card>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="scroll-x">
+        <table style={{ width: '100%', minWidth: 560, borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'var(--sand-50)' }}>
               {['Volunteer', 'Role', 'Email', 'Status', ''].map(h => (
@@ -2160,6 +2327,7 @@ function ManagerView({ trip, activeView }) {
             ))}
           </tbody>
         </table>
+        </div>
       </Card>
     </div>
   );
@@ -2167,6 +2335,7 @@ function ManagerView({ trip, activeView }) {
 
 // ─── ADDENDUM MODAL ───────────────────────────────────────────────────────────
 function AddendumModal({ visit, role, onClose }) {
+  const isMobile = useIsMobile();
   const [activeSection, setActiveSection] = useState('soapp');
   const [addendumText, setAddendumText] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -2230,19 +2399,26 @@ function AddendumModal({ visit, role, onClose }) {
               <span style={{ color: 'var(--sand-400)' }}>Read-only — addenda only</span>
             </div>
           </div>
-          <AllergyBanner allergies={visit.patient.allergies} />
+          {!isMobile && <AllergyBanner allergies={visit.patient.allergies} />}
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: 'var(--sand-400)', padding: '4px 8px' }}>✕</button>
         </div>
 
-        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', flex: 1, minHeight: 0, overflow: 'hidden' }}>
           {/* Section nav */}
-          <div style={{ width: 180, borderRight: '1px solid var(--sand-200)', padding: '16px 12px', background: 'var(--sand-50)', flexShrink: 0 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--sand-500)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 10 }}>Sections</div>
+          <div className={isMobile ? 'scroll-x' : undefined} style={{
+            width: isMobile ? '100%' : 180,
+            display: isMobile ? 'flex' : 'block', gap: isMobile ? 6 : 0,
+            borderRight: isMobile ? 'none' : '1px solid var(--sand-200)',
+            borderBottom: isMobile ? '1px solid var(--sand-200)' : 'none',
+            padding: isMobile ? '10px 12px' : '16px 12px', background: 'var(--sand-50)', flexShrink: 0
+          }}>
+            {!isMobile && <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--sand-500)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 10 }}>Sections</div>}
             {sections.map(s => (
               <button key={s.id} onClick={() => { setActiveSection(s.id); setShowForm(false); setAddendumText(''); }}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px',
-                  borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer', marginBottom: 3,
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px',
+                  width: isMobile ? 'auto' : '100%', flexShrink: 0, whiteSpace: 'nowrap',
+                  borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer', marginBottom: isMobile ? 0 : 3,
                   background: activeSection === s.id ? 'var(--sand-200)' : 'transparent',
                   fontFamily: 'var(--font-body)', fontSize: 13,
                   color: activeSection === s.id ? 'var(--sand-900)' : 'var(--sand-600)',
@@ -2366,7 +2542,8 @@ function CompletedDashboard({ completed, role }) {
         <Card style={{ padding: '48px', textAlign: 'center', color: 'var(--sand-400)' }}>No completed visits yet</Card>
       ) : (
         <Card>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="scroll-x">
+          <table style={{ width: '100%', minWidth: 640, borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'var(--sand-50)' }}>
                 {['Patient', 'Provider', 'Assessment', 'Rx', 'Date', ''].map(h => (
@@ -2409,6 +2586,7 @@ function CompletedDashboard({ completed, role }) {
               ))}
             </tbody>
           </table>
+          </div>
         </Card>
       )}
 
@@ -2421,6 +2599,7 @@ function CompletedDashboard({ completed, role }) {
 
 // ─── COMMAND CENTER ──────────────────────────────────────────────────────────
 function CommandCenter({ careQueue, pharmacyQueue, completed, darkMode }) {
+  const isMobile = useIsMobile();
   const [tick, setTick] = useState(0);
   useEffect(() => { const t = setInterval(() => setTick(x => x + 1), 30000); return () => clearInterval(t); }, []);
 
@@ -2464,12 +2643,12 @@ function CommandCenter({ careQueue, pharmacyQueue, completed, darkMode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: col.bg }}>
       {/* Top bar */}
-      <div style={{ background: col.header, borderBottom: `1px solid ${D ? 'rgba(255,255,255,0.06)' : 'var(--sand-200)'}`, padding: '12px 24px', display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0 }}>
+      <div style={{ background: col.header, borderBottom: `1px solid ${D ? 'rgba(255,255,255,0.06)' : 'var(--sand-200)'}`, padding: isMobile ? '12px 16px' : '12px 24px', display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 16, flexShrink: 0, flexWrap: 'wrap' }}>
         <div>
           <h2 style={{ fontSize: 16, fontWeight: 600, color: D ? '#fff' : 'var(--sand-50)', letterSpacing: '-0.01em' }}>Command Center</h2>
           <div style={{ fontSize: 11, color: D ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.5)', marginTop: 1 }}>Guatemala Mission · May 1, 2026 · All queues live</div>
         </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#5EC4B7', animation: 'pulse 2s infinite' }}></div>
             <span style={{ fontSize: 11, color: D ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.6)' }}>Live</span>
@@ -2483,10 +2662,10 @@ function CommandCenter({ careQueue, pharmacyQueue, completed, darkMode }) {
         </div>
       </div>
 
-      {/* Three-column kanban */}
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', overflow: 'hidden', gap: 1, background: D ? 'rgba(255,255,255,0.04)' : 'var(--sand-200)' }}>
+      {/* Three-column kanban — one stacked column on a phone */}
+      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', overflowX: 'hidden', overflowY: isMobile ? 'auto' : 'hidden', WebkitOverflowScrolling: 'touch', gap: 1, background: D ? 'rgba(255,255,255,0.04)' : 'var(--sand-200)' }}>
         {stages.map(stage => (
-          <div key={stage.id} style={{ background: col.colBg, padding: '16px 14px', overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div key={stage.id} style={{ background: col.colBg, padding: '16px 14px', overflow: isMobile ? 'visible' : 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
             {/* Column header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexShrink: 0 }}>
               <span style={{ fontSize: 14 }}>{stage.icon}</span>
@@ -2570,6 +2749,7 @@ function CommandCenter({ careQueue, pharmacyQueue, completed, darkMode }) {
 
 // ─── OVERVIEW (Command Center + Dashboard) ───────────────────────────────────
 function OverviewView({ careQueue, pharmacyQueue, completed, darkMode }) {
+  const isMobile = useIsMobile();
   const recentVisits = [
     { name: 'Maria Santos', provider: 'Dr. Chen', pharmacy: 'M. Flores', rx: '2/2', duration: '32 min' },
     { name: 'Carlos Mendez', provider: 'Dr. Patel', pharmacy: 'M. Flores', rx: '1/1', duration: '18 min' },
@@ -2578,7 +2758,7 @@ function OverviewView({ careQueue, pharmacyQueue, completed, darkMode }) {
   return (
     <div style={{ background: 'var(--sand-100)', minHeight: '100%' }}>
       {/* ── Command Center (live queues) ── */}
-      <div style={{ height: 640, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ height: isMobile ? 'auto' : 640, minHeight: isMobile ? 420 : undefined, display: 'flex', flexDirection: 'column' }}>
         <CommandCenter careQueue={careQueue} pharmacyQueue={pharmacyQueue} completed={completed} darkMode={darkMode} />
       </div>
 
@@ -2588,7 +2768,7 @@ function OverviewView({ careQueue, pharmacyQueue, completed, darkMode }) {
           <h1 style={{ fontSize: 20, fontWeight: 600, color: 'var(--sand-900)', letterSpacing: '-0.01em' }}>Today's Summary</h1>
           <span style={{ fontSize: 12, color: 'var(--sand-500)' }}>{formatDate()} · Clinic A</span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 24 }}>
+        <div className="g4" style={{ gap: 14, marginBottom: 24 }}>
           {[
             ['Completed Today', '24', 'teal'],
             ['In Progress', String(careQueue.length + pharmacyQueue.length), 'amber'],
@@ -2637,6 +2817,8 @@ function App() {
   const [triageStep, setTriageStep] = useState('search'); // search | new | vitals
   const [activeCarePatient, setActiveCarePatient] = useState(null);
   const [activePharmacyPatient, setActivePharmacyPatient] = useState(null);
+
+  const isMobile = useIsMobile();
 
   // Unsaved-work guard for sidebar navigation
   const dirtyRef = useRef(false);
@@ -2823,11 +3005,14 @@ function App() {
 
   return (
     <TweaksCtx.Provider value={{ tweaks, setTweak }}>
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--sand-100)' }}>
+    <div style={{
+      display: 'flex', flexDirection: isMobile ? 'column' : 'row',
+      height: 'var(--app-h)', overflow: 'hidden', background: 'var(--sand-100)'
+    }}>
       <Sidebar role={role} setRole={changeRole}
         activeView={activeView} setView={navigate} trip={trip} notifications={notifications}
         darkMode={darkMode} onToggleDark={() => setTweak('darkMode', !darkMode)} />
-      <div style={{ flex: 1, overflow: 'auto' }}>
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', WebkitOverflowScrolling: 'touch' }}>
         {renderMain()}
       </div>
 
