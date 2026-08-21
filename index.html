@@ -31,6 +31,9 @@
     --teal-500: #1E8A7D;
     --teal-600: #166E63;
 
+    /* Accent — driven by the accentColor tweak */
+    --accent: #1E8A7D;
+
     --amber-100: #FEF3C7;
     --amber-400: #FBBF24;
     --amber-600: #D97706;
@@ -73,6 +76,23 @@
   @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
   .animate-in { animation: slideIn 0.2s ease; }
   .fade-in { animation: fadeIn 0.15s ease; }
+
+  /* Cool theme — swaps the warm sand palette for neutral greys */
+  body.theme-cool {
+    --sand-50: #FAFBFC;
+    --sand-100: #F1F3F5;
+    --sand-200: #E3E7EB;
+    --sand-300: #CDD4DB;
+    --sand-400: #AEB8C2;
+    --sand-500: #8B96A3;
+    --sand-600: #6B7683;
+    --sand-700: #4E5760;
+    --sand-800: #363D45;
+    --sand-900: #1F252B;
+    --shadow-sm: 0 1px 3px rgba(31,37,43,0.10);
+    --shadow-md: 0 4px 12px rgba(31,37,43,0.12);
+    --shadow-lg: 0 8px 32px rgba(31,37,43,0.14);
+  }
 
   /* Dark mode overrides */
   body.dark-mode {
@@ -392,6 +412,25 @@ function TweakRadio({ id, label, options }) {
   );
 }
 
+function TweakColor({ id, label, swatches = [] }) {
+  const { tweaks, setTweak } = React.useContext(TweaksCtx);
+  const value = tweaks[id];
+  return (
+    <TweakRow label={label} value={value}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {swatches.map((c) => (
+          <button key={c} type="button" title={c} onClick={() => setTweak(id, c)}
+                  style={{ width: 18, height: 18, borderRadius: '50%', background: c, cursor: 'pointer',
+                           border: '1px solid rgba(0,0,0,0.2)',
+                           outline: value === c ? '2px solid currentColor' : 'none', outlineOffset: 2 }} />
+        ))}
+        <input type="color" value={value} onChange={(e) => setTweak(id, e.target.value)}
+               style={{ width: 24, height: 22, padding: 0, border: 'none', background: 'none', cursor: 'pointer' }} />
+      </div>
+    </TweakRow>
+  );
+}
+
 function TweakButton({ label, onClick, secondary = false }) {
   return (
     <button type="button" className={secondary ? 'twk-btn secondary' : 'twk-btn'}
@@ -497,6 +536,37 @@ function minutesAgo(ts) {
   return `${diff} min ago`;
 }
 
+// Full display name — extensionName is the patient's second last name, used as
+// an extra identifier where two patients share a first + last name.
+function patientName(p) {
+  if (!p) return '';
+  return [p.firstName, p.lastName, p.extensionName].filter(Boolean).join(' ');
+}
+
+// ─── DENSITY ──────────────────────────────────────────────────────────────────
+// The density tweak scales the px spacing inside Cards, which is where nearly
+// all of the app's whitespace lives.
+const DENSITY_SCALE = { compact: 0.7, comfortable: 1, spacious: 1.3 };
+
+function useDensity() {
+  const ctx = React.useContext(TweaksCtx);
+  return DENSITY_SCALE[ctx && ctx.tweaks && ctx.tweaks.density] || 1;
+}
+
+function scalePx(value, scale) {
+  if (scale === 1 || value == null) return value;
+  if (typeof value === 'number') return Math.round(value * scale);
+  if (typeof value !== 'string') return value;
+  return value.replace(/(\d+(?:\.\d+)?)px/g, (_, n) => `${Math.round(parseFloat(n) * scale)}px`);
+}
+
+// Reads the queueStyle tweak: 'compact' hides the detail drawer, 'detailed'
+// keeps every card open, 'hybrid' is click-to-expand.
+function useQueueStyle() {
+  const ctx = React.useContext(TweaksCtx);
+  return (ctx && ctx.tweaks && ctx.tweaks.queueStyle) || 'hybrid';
+}
+
 // ─── SHARED UI COMPONENTS ─────────────────────────────────────────────────────
 function Badge({ color = 'sand', children, size = 'sm' }) {
   const colors = {
@@ -529,11 +599,11 @@ function Button({ onClick, variant = 'primary', size = 'md', disabled, children,
     padding: size === 'sm' ? '6px 14px' : size === 'lg' ? '12px 24px' : '9px 18px',
   };
   const variants = {
-    primary: { background: '#1E8A7D', color: '#fff' },
+    primary: { background: 'var(--accent)', color: '#fff' },
     secondary: { background: 'var(--sand-200)', color: 'var(--sand-800)' },
     danger: { background: 'var(--red-500)', color: '#fff' },
     ghost: { background: 'transparent', color: 'var(--sand-700)' },
-    outline: { background: 'transparent', color: '#1E8A7D', border: '1.5px solid #1E8A7D' },
+    outline: { background: 'transparent', color: 'var(--accent)', border: '1.5px solid var(--accent)' },
   };
   return (
     <button onClick={disabled ? undefined : onClick}
@@ -645,13 +715,15 @@ function PhotoPlaceholder({ name, size = 40 }) {
 }
 
 function Card({ children, style, onClick }) {
+  const scale = useDensity();
+  const scaled = style && scale !== 1 ? { ...style, padding: scalePx(style.padding, scale) } : style;
   return (
     <div onClick={onClick}
       style={{
         background: '#fff', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)',
         border: '1px solid var(--sand-200)', overflow: 'hidden',
         cursor: onClick ? 'pointer' : 'default', transition: 'box-shadow 0.15s',
-        ...style
+        ...scaled
       }}
       onMouseEnter={onClick ? e => e.currentTarget.style.boxShadow = 'var(--shadow-md)' : undefined}
       onMouseLeave={onClick ? e => e.currentTarget.style.boxShadow = 'var(--shadow-sm)' : undefined}
@@ -680,6 +752,161 @@ function VitalFlag({ value, warn }) {
   return <span style={{ color: 'var(--amber-600)', fontSize: 11 }}>⚠</span>;
 }
 
+const SOAPP_FIELDS = [
+  { key: 'subjective', label: 'S — Subjective' },
+  { key: 'objective', label: 'O — Objective' },
+  { key: 'assessment', label: 'A — Assessment' },
+  { key: 'plan', label: 'P — Plan' },
+  { key: 'procedures', label: 'Procedures' },
+];
+
+// Read-only rendering of a full SOAPP note. Shared by the pharmacy chart view
+// and the triage past-visit modal.
+function SoappReadout({ note, compact = false }) {
+  const rows = note ? SOAPP_FIELDS.filter(f => note[f.key]) : [];
+  if (rows.length === 0) {
+    return (
+      <div style={{ fontSize: compact ? 12 : 13, color: 'var(--sand-400)', fontStyle: 'italic' }}>
+        No clinical note recorded
+      </div>
+    );
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: compact ? 8 : 10 }}>
+      {rows.map(f => (
+        <div key={f.key} style={{
+          padding: compact ? '8px 10px' : '10px 14px', background: '#fff',
+          borderRadius: 6, border: '1px solid var(--sand-200)'
+        }}>
+          <div style={{ fontSize: 10, color: 'var(--sand-400)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 3 }}>
+            {f.label}
+          </div>
+          <div style={{ fontSize: compact ? 12 : 13, color: 'var(--sand-700)', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
+            {note[f.key]}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Screens with in-progress input report whether they hold unsaved work, so the
+// sidebar can warn before throwing it away.
+function useReportDirty(dirty, onDirtyChange) {
+  React.useEffect(() => {
+    if (onDirtyChange) onDirtyChange(dirty);
+  }, [dirty, onDirtyChange]);
+  React.useEffect(() => () => {
+    if (onDirtyChange) onDirtyChange(false);
+  }, [onDirtyChange]);
+}
+
+function ConfirmDiscardModal({ onCancel, onDiscard }) {
+  return (
+    <div className="fade-in" onClick={onCancel} style={{
+      position: 'fixed', inset: 0, background: 'rgba(44,36,25,0.5)', zIndex: 200,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: '#fff', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)',
+        width: '100%', maxWidth: 420, padding: '24px 26px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+          <div style={{ fontSize: 24, lineHeight: 1 }}>⚠️</div>
+          <div>
+            <h2 style={{ fontSize: 17, fontWeight: 600, color: 'var(--sand-900)', marginBottom: 6 }}>
+              Discard unsaved work?
+            </h2>
+            <p style={{ fontSize: 13, color: 'var(--sand-600)', lineHeight: 1.6 }}>
+              This screen has entries that have not been saved. Leaving now discards them,
+              and they cannot be recovered.
+            </p>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 22 }}>
+          <Button variant="secondary" onClick={onCancel}>Keep Editing</Button>
+          <Button variant="danger" onClick={onDiscard}>Discard &amp; Leave</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Read-only detail for a past visit. Accepts either shape of note (seed visits
+// store it under `soapp`, in-session visits under `note`).
+function VisitDetailModal({ visit, patient, onClose }) {
+  const note = visit.soapp || visit.note;
+  const meds = visit.administered || visit.adminMeds || [];
+  const rx = visit.prescriptions || visit.rxRequests || [];
+  return (
+    <div className="fade-in" onClick={onClose} style={{
+      position: 'fixed', inset: 0, background: 'rgba(44,36,25,0.5)', zIndex: 100,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: 'var(--sand-50)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)',
+        width: '100%', maxWidth: 620, maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden'
+      }}>
+        <div style={{ padding: '18px 22px', borderBottom: '1px solid var(--sand-200)', display: 'flex', alignItems: 'center', gap: 12, background: '#fff' }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--sand-900)' }}>Visit — {visit.date || visit.closedTime}</div>
+            <div style={{ fontSize: 12, color: 'var(--sand-500)' }}>
+              {patientName(patient)}{visit.provider ? ` · ${visit.provider}` : ''}
+            </div>
+          </div>
+          <Badge color="sand">Read only</Badge>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 18, color: 'var(--sand-500)', cursor: 'pointer' }}>✕</button>
+        </div>
+
+        <div style={{ flex: 1, overflow: 'auto', padding: '18px 22px' }}>
+          {visit.vitals && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--sand-500)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8 }}>Vitals</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+                {Object.entries(visit.vitals).map(([k, v]) => (
+                  <div key={k} style={{ background: '#fff', padding: '6px 8px', borderRadius: 6, border: '1px solid var(--sand-200)' }}>
+                    <div style={{ fontSize: 10, color: 'var(--sand-400)', textTransform: 'uppercase' }}>{k}</div>
+                    <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--sand-900)' }}>{String(v)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--sand-500)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8 }}>SOAPP Note</div>
+          <SoappReadout note={note} />
+
+          {meds.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--sand-500)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8 }}>Administered in Clinic</div>
+              {meds.map((m, i) => (
+                <div key={i} style={{ fontSize: 12, color: 'var(--sand-700)', padding: '5px 0', borderBottom: '1px solid var(--sand-200)' }}>
+                  💉 {m.name} {m.dose}{m.unit || ''} · {m.route}{m.time ? ` · ${m.time}` : ''}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {rx.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--sand-500)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8 }}>Prescriptions</div>
+              {rx.map((r, i) => (
+                <div key={i} style={{ fontSize: 12, color: 'var(--sand-700)', padding: '5px 0', borderBottom: '1px solid var(--sand-200)' }}>
+                  💊 {r.name} {r.dose}{r.unit || ''} · {r.route}{r.sig ? ` · "${r.sig}"` : ''}{r.status ? ` · ${r.status}` : ''}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div style={{ padding: '12px 22px', borderTop: '1px solid var(--sand-200)', background: '#fff', display: 'flex', justifyContent: 'flex-end' }}>
+          <Button variant="secondary" onClick={onClose}>Close</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── SIDEBAR NAV ──────────────────────────────────────────────────────────────
 const ROLE_CONFIG = {
   Triage: { icon: '🏥', label: 'Triage', color: '#1E8A7D' },
@@ -690,10 +917,11 @@ const ROLE_CONFIG = {
 
 function Sidebar({ role, setRole, activeView, setView, trip, notifications, darkMode, onToggleDark }) {
   const roles = ['Triage', 'Provider', 'Pharmacy', 'Manager'];
+  const COMMAND_CENTER = { id: 'command', label: 'Command Center', icon: '⚡' };
   const navItems = {
-    Triage: [{ id: 'search', label: 'Patient Search', icon: '🔍' }, { id: 'checkins', label: 'Checked In Today', icon: '📋' }],
-    Provider: [{ id: 'queue', label: 'Care Queue', icon: '👥' }, { id: 'completed', label: 'Completed', icon: '✓' }],
-    Pharmacy: [{ id: 'queue', label: 'Pharmacy Queue', icon: '💊' }, { id: 'completed', label: 'Completed', icon: '✓' }],
+    Triage: [{ id: 'search', label: 'Patient Search', icon: '🔍' }, { id: 'checkins', label: 'Checked In Today', icon: '📋' }, COMMAND_CENTER],
+    Provider: [{ id: 'queue', label: 'Care Queue', icon: '👥' }, { id: 'completed', label: 'Completed', icon: '✓' }, COMMAND_CENTER],
+    Pharmacy: [{ id: 'queue', label: 'Pharmacy Queue', icon: '💊' }, { id: 'completed', label: 'Completed', icon: '✓' }, COMMAND_CENTER],
     Manager: [{ id: 'overview', label: 'Overview', icon: '⚡' }, { id: 'trip', label: 'Trip Config', icon: '🗺' }, { id: 'roster', label: 'Volunteer Roster', icon: '👥' }],
   };
 
@@ -717,7 +945,7 @@ function Sidebar({ role, setRole, activeView, setView, trip, notifications, dark
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {roles.map(r => (
-            <button key={r} onClick={() => { setRole(r); setView(navItems[r][0].id); }}
+            <button key={r} onClick={() => setRole(r, navItems[r][0].id)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px',
                 borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer', textAlign: 'left',
@@ -814,8 +1042,8 @@ function TriageSearch({ patients, onCheckIn, onNewPatient }) {
     if (!query.trim()) return;
     const q = query.toLowerCase();
     const found = patients.filter(p =>
-      `${p.firstName} ${p.lastName}`.toLowerCase().includes(q) ||
-      p.phone.includes(q) || p.id.toLowerCase().includes(q)
+      patientName(p).toLowerCase().includes(q) ||
+      (p.phone || '').includes(q) || p.id.toLowerCase().includes(q)
     );
     setResults(found);
     setSearched(true);
@@ -881,16 +1109,16 @@ function PatientSearchCard({ patient, onSelect }) {
   return (
     <Card onClick={onSelect} style={{ padding: '16px 20px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        <PhotoPlaceholder name={`${patient.firstName} ${patient.lastName}`} size={48} />
+        <PhotoPlaceholder name={patientName(patient)} size={48} />
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <span style={{ fontSize: 15, fontWeight: 600 }}>{patient.firstName} {patient.lastName}</span>
+            <span style={{ fontSize: 15, fontWeight: 600 }}>{patientName(patient)}</span>
             {patient.allergies.length > 0 && <Badge color="red">⚠ Allergies</Badge>}
             {patient.visits.length > 0 && <Badge color="teal">Returning</Badge>}
           </div>
           <div style={{ fontSize: 13, color: 'var(--sand-600)', display: 'flex', gap: 16 }}>
             <span>DOB: {patient.dob} · {age}y</span>
-            <span>📱 {patient.phone}</span>
+            {patient.phone && <span>📱 {patient.phone}</span>}
             {lastVisit && <span>Last visit: {lastVisit}</span>}
           </div>
         </div>
@@ -900,14 +1128,21 @@ function PatientSearchCard({ patient, onSelect }) {
   );
 }
 
-function NewPatientForm({ onComplete }) {
-  const [form, setForm] = useState({
-    firstName: '', lastName: '', dob: '', gender: '', phone: '', email: '', location: 'Clinic A'
-  });
+const NEW_PATIENT_INIT = {
+  firstName: '', lastName: '', extensionName: '', dob: '', gender: '', phone: '', email: '', location: 'Clinic A'
+};
+
+function NewPatientForm({ onComplete, onDirtyChange }) {
+  const [form, setForm] = useState(NEW_PATIENT_INIT);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
+  useReportDirty(
+    Object.keys(NEW_PATIENT_INIT).some(k => form[k] !== NEW_PATIENT_INIT[k]),
+    onDirtyChange
+  );
+
   const submit = () => {
-    if (!form.firstName || !form.lastName || !form.dob || !form.phone) {
+    if (!form.firstName || !form.lastName || !form.dob) {
       alert('Please fill in all required fields.');
       return;
     }
@@ -928,6 +1163,8 @@ function NewPatientForm({ onComplete }) {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           <Input label="First Name" value={form.firstName} onChange={v => set('firstName', v)} required />
           <Input label="Last Name" value={form.lastName} onChange={v => set('lastName', v)} required />
+          <Input label="Extension Name" value={form.extensionName} onChange={v => set('extensionName', v)}
+            hint="Second last name / additional identifier" />
           <Input label="Date of Birth" value={form.dob} onChange={v => set('dob', v)} type="date" required />
           <Select label="Gender" value={form.gender} onChange={v => set('gender', v)} required options={[
             { value: '', label: 'Select...' },
@@ -937,7 +1174,7 @@ function NewPatientForm({ onComplete }) {
             { value: 'Prefer not to say', label: 'Prefer not to say' },
             { value: 'Other', label: 'Other' },
           ]} />
-          <Input label="Phone Number" value={form.phone} onChange={v => set('phone', v)} required />
+          <Input label="Phone Number" value={form.phone} onChange={v => set('phone', v)} hint="Optional" />
           <Input label="Email" value={form.email} onChange={v => set('email', v)} hint="For visit summary" />
           <Input label="Clinic Site" value={form.location} onChange={v => set('location', v)} required />
         </div>
@@ -956,6 +1193,38 @@ function NewPatientForm({ onComplete }) {
           <div style={{ fontSize: 12 }}>Center patient's face, neutral expression, adequate lighting</div>
           <Button variant="secondary" size="sm" style={{ marginTop: 12 }}>Choose Photo</Button>
         </div>
+
+        {/* Photo consent script — read aloud to the patient before capturing */}
+        <div style={{
+          marginTop: 16, padding: '14px 16px', background: 'var(--blue-50)',
+          border: '1.5px solid var(--blue-100)', borderRadius: 'var(--radius-md)'
+        }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--blue-600)', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 10 }}>
+            🗣 Read aloud to the patient before taking the photo
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--sand-500)', marginBottom: 3 }}>English</div>
+            <p style={{ fontSize: 13, color: 'var(--sand-800)', lineHeight: 1.6 }}>
+              We would like to take your photograph and keep it with your medical record. The photo is
+              used for one purpose only: to confirm who you are when you come back to see us, so we can
+              find your record quickly and be sure that any care, medications, or test results are
+              matched to the right person. Do you give us permission to take and store your photograph
+              for this purpose?
+            </p>
+          </div>
+
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--sand-500)', marginBottom: 3 }}>Español</div>
+            <p style={{ fontSize: 13, color: 'var(--sand-800)', lineHeight: 1.6 }}>
+              Quisiéramos tomarle una fotografía y guardarla junto con su expediente médico. La fotografía
+              se usa únicamente para confirmar su identidad cuando regrese a vernos, de modo que podamos
+              encontrar su expediente rápidamente y asegurarnos de que la atención, los medicamentos y los
+              resultados correspondan a la persona correcta. ¿Nos da su permiso para tomar y guardar su
+              fotografía con este fin?
+            </p>
+          </div>
+        </div>
       </Card>
 
       <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
@@ -966,7 +1235,7 @@ function NewPatientForm({ onComplete }) {
   );
 }
 
-function VitalsForm({ patient, onComplete }) {
+function VitalsForm({ patient, onComplete, onDirtyChange }) {
   const isReturning = patient.visits.length > 0;
   const [vitals, setVitals] = useState({
     bpSys: '', bpDia: '', hr: '', rr: '', temp: '', weight: '', height: '', spo2: '',
@@ -974,11 +1243,19 @@ function VitalsForm({ patient, onComplete }) {
   });
   const [allergies, setAllergies] = useState(patient.allergies.join(', '));
   const [allergyConfirmed, setAllergyConfirmed] = useState(false);
+  const [selectedVisit, setSelectedVisit] = useState(null);
   const [tempUnit, setTempUnit] = useState('°F');
   const [weightUnit, setWeightUnit] = useState('kg');
   const [heightUnit, setHeightUnit] = useState('cm');
 
   const setV = (k, v) => setVitals(vit => ({ ...vit, [k]: v }));
+
+  useReportDirty(
+    Object.values(vitals).some(v => v && String(v).trim()) ||
+    allergies !== patient.allergies.join(', ') ||
+    allergyConfirmed,
+    onDirtyChange
+  );
 
   const warnings = [];
   if (vitals.spo2 && parseFloat(vitals.spo2) < 90) warnings.push('SpO₂ below 90% — verify reading');
@@ -1003,9 +1280,9 @@ function VitalsForm({ patient, onComplete }) {
       {/* Patient header */}
       <Card style={{ padding: '16px 20px', marginBottom: 20, background: 'var(--sand-50)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <PhotoPlaceholder name={`${patient.firstName} ${patient.lastName}`} size={48} />
+          <PhotoPlaceholder name={patientName(patient)} size={48} />
           <div>
-            <div style={{ fontSize: 16, fontWeight: 600 }}>{patient.firstName} {patient.lastName}</div>
+            <div style={{ fontSize: 16, fontWeight: 600 }}>{patientName(patient)}</div>
             <div style={{ fontSize: 13, color: 'var(--sand-600)' }}>
               {calcAge(patient.dob)}y · {patient.gender} · {isReturning ? `${patient.visits.length} prior visit(s)` : 'New patient'}
             </div>
@@ -1018,14 +1295,36 @@ function VitalsForm({ patient, onComplete }) {
       {isReturning && patient.allergies.length > 0 && (
         <div style={{ marginBottom: 16 }}>
           <AllergyBanner allergies={patient.allergies} />
-          <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--sand-100)', borderRadius: 'var(--radius-sm)' }}>
-            <input type="checkbox" id="allergyConfirm" checked={allergyConfirmed} onChange={e => setAllergyConfirmed(e.target.checked)}
-              style={{ width: 16, height: 16, cursor: 'pointer' }} />
-            <label htmlFor="allergyConfirm" style={{ fontSize: 13, color: 'var(--sand-700)', cursor: 'pointer' }}>
-              Confirmed unchanged — allergies reviewed and accurate
-            </label>
-          </div>
         </div>
+      )}
+
+      {/* Past visit history — read-only drill-in to the SOAPP note */}
+      {isReturning && (
+        <Card style={{ padding: '20px 22px', marginBottom: 16 }}>
+          <SectionHeader title="Past Visit History" count={patient.visits.length} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {patient.visits.slice().reverse().map(v => (
+              <div key={v.id} onClick={() => setSelectedVisit(v)}
+                style={{
+                  padding: '10px 14px', background: 'var(--sand-50)', border: '1px solid var(--sand-200)',
+                  borderRadius: 'var(--radius-sm)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--sand-100)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'var(--sand-50)'}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--sand-800)', marginBottom: 2 }}>
+                    {v.date} · {v.provider}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--sand-600)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {v.soapp?.assessment || 'No assessment recorded'}
+                  </div>
+                </div>
+                {v.prescriptions?.length > 0 && <Badge color="teal">{v.prescriptions.length} Rx</Badge>}
+                <span style={{ fontSize: 12, color: 'var(--teal-500)', whiteSpace: 'nowrap' }}>View note →</span>
+              </div>
+            ))}
+          </div>
+        </Card>
       )}
 
       {/* Warnings */}
@@ -1061,15 +1360,28 @@ function VitalsForm({ patient, onComplete }) {
         <div style={{ marginTop: 14 }}>
           <Input label="Allergies & Intolerances" value={allergies} onChange={setAllergies}
             placeholder="Penicillin, Sulfa drugs... (or NKDA)" hint="Separate multiple allergies with commas" />
+          {isReturning && patient.allergies.length > 0 && (
+            <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--sand-100)', borderRadius: 'var(--radius-sm)' }}>
+              <input type="checkbox" id="allergyConfirm" checked={allergyConfirmed} onChange={e => setAllergyConfirmed(e.target.checked)}
+                style={{ width: 16, height: 16, cursor: 'pointer' }} />
+              <label htmlFor="allergyConfirm" style={{ fontSize: 13, color: 'var(--sand-700)', cursor: 'pointer' }}>
+                Confirmed unchanged — allergies reviewed and accurate
+              </label>
+            </div>
+          )}
         </div>
       </Card>
 
       <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
         <Button variant="secondary">Cancel</Button>
-        <Button onClick={submit} style={{ background: '#1E8A7D' }}>
+        <Button onClick={submit}>
           ✓ Check In & Send to Care Queue
         </Button>
       </div>
+
+      {selectedVisit && (
+        <VisitDetailModal visit={selectedVisit} patient={patient} onClose={() => setSelectedVisit(null)} />
+      )}
     </div>
   );
 }
@@ -1077,6 +1389,9 @@ function VitalsForm({ patient, onComplete }) {
 // ─── PROVIDER VIEWS ───────────────────────────────────────────────────────────
 function CareQueue({ queue, onAssume }) {
   const [expanded, setExpanded] = useState(null);
+  const queueStyle = useQueueStyle();
+  const isOpen = (id) => queueStyle === 'detailed' ? true : queueStyle === 'compact' ? false : expanded === id;
+  const toggler = (id) => queueStyle === 'hybrid' ? () => setExpanded(expanded === id ? null : id) : null;
 
   return (
     <div style={{ padding: '24px', maxWidth: 900, margin: '0 auto' }}>
@@ -1101,8 +1416,8 @@ function CareQueue({ queue, onAssume }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {queue.map((item, i) => (
             <QueueCard key={item.id} item={item} index={i}
-              expanded={expanded === item.id}
-              onToggle={() => setExpanded(expanded === item.id ? null : item.id)}
+              expanded={isOpen(item.id)}
+              onToggle={toggler(item.id)}
               onAssume={() => onAssume(item)}
               actionLabel="Assume Patient"
               showVitals />
@@ -1117,19 +1432,21 @@ function QueueCard({ item, index, expanded, onToggle, onAssume, actionLabel, sho
   const age = item.patient ? calcAge(item.patient.dob) : '';
   const waitMins = Math.floor((Date.now() - item.checkInTime) / 60000);
   const hasAllergies = item.patient?.allergies?.length > 0;
+  const scale = useDensity();
+  const pad = scalePx('16px 20px', scale);
 
   return (
     <Card style={{ overflow: 'visible' }}>
-      <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}
-        onClick={onToggle}>
+      <div style={{ padding: pad, display: 'flex', alignItems: 'center', gap: 14, cursor: onToggle ? 'pointer' : 'default' }}
+        onClick={onToggle || undefined}>
         {/* Position */}
-        <div style={{ width: 28, height: 28, borderRadius: '50%', background: index === 0 ? '#1E8A7D' : 'var(--sand-200)',
+        <div style={{ width: 28, height: 28, borderRadius: '50%', background: index === 0 ? 'var(--accent)' : 'var(--sand-200)',
           color: index === 0 ? '#fff' : 'var(--sand-600)', display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{index + 1}</div>
-        <PhotoPlaceholder name={`${item.patient.firstName} ${item.patient.lastName}`} size={44} />
+        <PhotoPlaceholder name={patientName(item.patient)} size={44} />
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-            <span style={{ fontSize: 15, fontWeight: 600 }}>{item.patient.firstName} {item.patient.lastName}</span>
+            <span style={{ fontSize: 15, fontWeight: 600 }}>{patientName(item.patient)}</span>
             <span style={{ fontSize: 13, color: 'var(--sand-500)' }}>{age}y · {item.patient.gender}</span>
             {hasAllergies && <Badge color="red">⚠ Allergies</Badge>}
             {item.patient.visits.length > 0 && <Badge color="teal">Returning</Badge>}
@@ -1145,11 +1462,11 @@ function QueueCard({ item, index, expanded, onToggle, onAssume, actionLabel, sho
           <Badge color="amber">⚠ {item.warnings.length} flag{item.warnings.length > 1 ? 's' : ''}</Badge>
         )}
         <Button onClick={e => { e.stopPropagation(); onAssume(); }} size="sm">{actionLabel}</Button>
-        <span style={{ color: 'var(--sand-400)', fontSize: 14, marginLeft: 4 }}>{expanded ? '▲' : '▼'}</span>
+        {onToggle && <span style={{ color: 'var(--sand-400)', fontSize: 14, marginLeft: 4 }}>{expanded ? '▲' : '▼'}</span>}
       </div>
 
       {expanded && (
-        <div className="animate-in" style={{ borderTop: '1px solid var(--sand-100)', padding: '16px 20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div className="animate-in" style={{ borderTop: '1px solid var(--sand-100)', padding: pad, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           {/* Vitals summary */}
           <div>
             <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--sand-600)', marginBottom: 8 }}>VITALS</div>
@@ -1195,15 +1512,26 @@ function QueueCard({ item, index, expanded, onToggle, onAssume, actionLabel, sho
 }
 
 // ─── SOAPP NOTE VIEW ──────────────────────────────────────────────────────────
-function SOAPPView({ item, onClose, onSendToPharmacy }) {
+function SOAPPView({ item, onClose, onSendToPharmacy, onDirtyChange }) {
   const [note, setNote] = useState({ subjective: '', objective: '', assessment: '', plan: '', procedures: '' });
   const [adminMeds, setAdminMeds] = useState([]);
   const [rxRequests, setRxRequests] = useState([]);
   const [activeTab, setActiveTab] = useState('soapp');
   const [lastSaved, setLastSaved] = useState(null);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [vitals, setVitals] = useState(item.vitals || {});
+  const [vitalsDraft, setVitalsDraft] = useState(null);
 
   const setN = (k, v) => setNote(n => ({ ...n, [k]: v }));
+
+  useReportDirty(
+    Object.values(note).some(v => v.trim()) ||
+    adminMeds.length > 0 ||
+    rxRequests.length > 0 ||
+    !!vitalsDraft ||
+    JSON.stringify(vitals) !== JSON.stringify(item.vitals || {}),
+    onDirtyChange
+  );
 
   // Auto-save simulation
   useEffect(() => {
@@ -1221,7 +1549,7 @@ function SOAPPView({ item, onClose, onSendToPharmacy }) {
 
   const handleSendToPharmacy = () => {
     if (rxRequests.length === 0) { alert('Add at least one pharmacy request, or use "Close Visit Directly".'); return; }
-    onSendToPharmacy({ note, adminMeds, rxRequests });
+    onSendToPharmacy({ note, adminMeds, rxRequests, vitals });
   };
 
   const soappSections = [
@@ -1238,9 +1566,9 @@ function SOAPPView({ item, onClose, onSendToPharmacy }) {
       <div style={{ width: 280, background: 'var(--sand-50)', borderRight: '1px solid var(--sand-200)', display: 'flex', flexDirection: 'column', overflow: 'hidden', flexShrink: 0 }}>
         <div style={{ padding: '20px 18px', borderBottom: '1px solid var(--sand-200)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-            <PhotoPlaceholder name={`${item.patient.firstName} ${item.patient.lastName}`} size={52} />
+            <PhotoPlaceholder name={patientName(item.patient)} size={52} />
             <div>
-              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--sand-900)' }}>{item.patient.firstName} {item.patient.lastName}</div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--sand-900)' }}>{patientName(item.patient)}</div>
               <div style={{ fontSize: 12, color: 'var(--sand-600)' }}>{calcAge(item.patient.dob)}y · {item.patient.gender}</div>
               <div style={{ fontSize: 11, color: 'var(--sand-500)' }}>ID: {item.patient.id}</div>
             </div>
@@ -1248,28 +1576,68 @@ function SOAPPView({ item, onClose, onSendToPharmacy }) {
           <AllergyBanner allergies={item.patient.allergies} />
         </div>
 
-        {/* Current vitals */}
+        {/* Current vitals — provider-editable */}
         <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--sand-200)' }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--sand-500)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 10 }}>Current Vitals</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-            {[
-              ['BP', `${item.vitals?.bpSys || '—'}/${item.vitals?.bpDia || '—'}`],
-              ['HR', item.vitals?.hr ? `${item.vitals.hr} bpm` : '—'],
-              ['Temp', item.vitals?.temp ? `${item.vitals.temp}${item.vitals.tempUnit || '°F'}` : '—'],
-              ['SpO₂', item.vitals?.spo2 ? `${item.vitals.spo2}%` : '—'],
-              ['RR', item.vitals?.rr ? `${item.vitals.rr}/min` : '—'],
-              ['Wt', item.vitals?.weight ? `${item.vitals.weight} ${item.vitals.weightUnit || 'kg'}` : '—'],
-            ].map(([l, v]) => (
-              <div key={l} style={{ background: '#fff', padding: '6px 8px', borderRadius: 6, border: '1px solid var(--sand-200)' }}>
-                <div style={{ fontSize: 10, color: 'var(--sand-400)' }}>{l}</div>
-                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--sand-900)' }}>{v}</div>
-              </div>
-            ))}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--sand-500)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Current Vitals</div>
+            {!vitalsDraft && (
+              <button onClick={() => setVitalsDraft({ ...vitals })}
+                style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-body)', padding: 0 }}>
+                ✎ Edit
+              </button>
+            )}
           </div>
-          {item.vitals?.chiefComplaint && (
+
+          {vitalsDraft ? (
+            <div className="animate-in">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                {[
+                  ['bpSys', 'Systolic'], ['bpDia', 'Diastolic'],
+                  ['hr', 'HR (bpm)'], ['rr', 'RR (/min)'],
+                  ['temp', `Temp (${vitalsDraft.tempUnit || '°F'})`], ['spo2', 'SpO₂ (%)'],
+                  ['weight', `Wt (${vitalsDraft.weightUnit || 'kg'})`], ['height', `Ht (${vitalsDraft.heightUnit || 'cm'})`],
+                ].map(([k, label]) => (
+                  <div key={k} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <label style={{ fontSize: 10, color: 'var(--sand-500)', fontWeight: 500 }}>{label}</label>
+                    <input value={vitalsDraft[k] || ''} onChange={e => setVitalsDraft(d => ({ ...d, [k]: e.target.value }))}
+                      style={{
+                        width: '100%', padding: '5px 7px', borderRadius: 5, border: '1.5px solid var(--sand-300)',
+                        fontSize: 12, fontFamily: 'var(--font-body)', color: 'var(--sand-900)', background: '#fff', outline: 'none'
+                      }} />
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+                <Button size="sm" style={{ flex: 1 }}
+                  onClick={() => { setVitals(vitalsDraft); setVitalsDraft(null); setLastSaved(new Date()); }}>Save Vitals</Button>
+                <Button size="sm" variant="secondary" onClick={() => setVitalsDraft(null)}>Cancel</Button>
+              </div>
+              <div style={{ fontSize: 10, color: 'var(--sand-400)', marginTop: 6, lineHeight: 1.4 }}>
+                Corrections are recorded against this visit and replace the triage-entered values.
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+              {[
+                ['BP', `${vitals.bpSys || '—'}/${vitals.bpDia || '—'}`],
+                ['HR', vitals.hr ? `${vitals.hr} bpm` : '—'],
+                ['Temp', vitals.temp ? `${vitals.temp}${vitals.tempUnit || '°F'}` : '—'],
+                ['SpO₂', vitals.spo2 ? `${vitals.spo2}%` : '—'],
+                ['RR', vitals.rr ? `${vitals.rr}/min` : '—'],
+                ['Wt', vitals.weight ? `${vitals.weight} ${vitals.weightUnit || 'kg'}` : '—'],
+              ].map(([l, v]) => (
+                <div key={l} style={{ background: '#fff', padding: '6px 8px', borderRadius: 6, border: '1px solid var(--sand-200)' }}>
+                  <div style={{ fontSize: 10, color: 'var(--sand-400)' }}>{l}</div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--sand-900)' }}>{v}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {vitals.chiefComplaint && (
             <div style={{ marginTop: 10, padding: '8px 10px', background: 'var(--teal-50)', borderRadius: 6, border: '1px solid var(--teal-100)' }}>
               <div style={{ fontSize: 10, color: 'var(--teal-600)', fontWeight: 600, marginBottom: 2 }}>CHIEF COMPLAINT</div>
-              <div style={{ fontSize: 12, color: 'var(--sand-800)' }}>{item.vitals.chiefComplaint}</div>
+              <div style={{ fontSize: 12, color: 'var(--sand-800)' }}>{vitals.chiefComplaint}</div>
             </div>
           )}
         </div>
@@ -1422,10 +1790,9 @@ function SOAPPView({ item, onClose, onSendToPharmacy }) {
 
         {/* Bottom action bar */}
         <div style={{ padding: '14px 20px', borderTop: '1px solid var(--sand-200)', background: '#fff', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Button variant="ghost" size="sm" onClick={() => {}}>Return to Triage</Button>
           <Button variant="ghost" size="sm" onClick={() => {}}>Discharge Patient</Button>
           <div style={{ flex: 1 }}></div>
-          <Button variant="secondary" onClick={() => onClose(false)}>Close Visit Directly</Button>
+          <Button variant="secondary" onClick={() => onClose(false, vitals)}>Close Visit Directly</Button>
           <Button onClick={handleSendToPharmacy}>Send to Pharmacy →</Button>
         </div>
       </div>
@@ -1436,6 +1803,9 @@ function SOAPPView({ item, onClose, onSendToPharmacy }) {
 // ─── PHARMACY VIEWS ───────────────────────────────────────────────────────────
 function PharmacyView({ queue, onAssume }) {
   const [expanded, setExpanded] = useState(null);
+  const queueStyle = useQueueStyle();
+  const isOpen = (id) => queueStyle === 'detailed' ? true : queueStyle === 'compact' ? false : expanded === id;
+  const toggler = (id) => queueStyle === 'hybrid' ? () => setExpanded(expanded === id ? null : id) : null;
   return (
     <div style={{ padding: '24px', maxWidth: 900, margin: '0 auto' }}>
       <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -1459,8 +1829,8 @@ function PharmacyView({ queue, onAssume }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {queue.map((item, i) => (
             <QueueCard key={item.id} item={item} index={i}
-              expanded={expanded === item.id}
-              onToggle={() => setExpanded(expanded === item.id ? null : item.id)}
+              expanded={isOpen(item.id)}
+              onToggle={toggler(item.id)}
               onAssume={() => onAssume(item)}
               actionLabel="Assume Patient"
               showVitals={false} />
@@ -1471,7 +1841,7 @@ function PharmacyView({ queue, onAssume }) {
   );
 }
 
-function PharmacyFulfillment({ item, onClose }) {
+function PharmacyFulfillment({ item, onClose, onDirtyChange }) {
   const [rxStatus, setRxStatus] = useState(
     item.rxRequests.map(rx => ({ ...rx, status: 'pending', qty: '', reason: '', freq: 'once_daily', reminder: false }))
   );
@@ -1481,18 +1851,23 @@ function PharmacyFulfillment({ item, onClose }) {
     setRxStatus(s => s.map(r => r.id === id ? { ...r, ...updates } : r));
   };
 
+  useReportDirty(
+    rxStatus.some(r => r.status !== 'pending' || r.qty || r.reason || r.reminder),
+    onDirtyChange
+  );
+
   const allAddressed = rxStatus.every(r => r.status !== 'pending');
   const hasAllergyConflict = (rx) => item.patient.allergies.some(a => rx.name.toLowerCase().includes(a.toLowerCase()));
 
   return (
     <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
       {/* Left: Patient info */}
-      <div style={{ width: 260, background: 'var(--sand-50)', borderRight: '1px solid var(--sand-200)', display: 'flex', flexDirection: 'column', overflow: 'auto', flexShrink: 0 }}>
+      <div style={{ width: 300, background: 'var(--sand-50)', borderRight: '1px solid var(--sand-200)', display: 'flex', flexDirection: 'column', overflow: 'auto', flexShrink: 0 }}>
         <div style={{ padding: '20px 18px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-            <PhotoPlaceholder name={`${item.patient.firstName} ${item.patient.lastName}`} size={52} />
+            <PhotoPlaceholder name={patientName(item.patient)} size={52} />
             <div>
-              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--sand-900)' }}>{item.patient.firstName} {item.patient.lastName}</div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--sand-900)' }}>{patientName(item.patient)}</div>
               <div style={{ fontSize: 12, color: 'var(--sand-600)' }}>{calcAge(item.patient.dob)}y · {item.patient.gender}</div>
               <div style={{ fontSize: 11, color: 'var(--sand-500)' }}>Provider: {item.provider}</div>
             </div>
@@ -1515,24 +1890,37 @@ function PharmacyFulfillment({ item, onClose }) {
             </div>
           )}
 
-          {/* SOAPP read-only */}
-          {item.note && (
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--sand-500)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8 }}>Clinical Notes (Read Only)</div>
-              {item.note.assessment && (
-                <div style={{ marginBottom: 8, padding: '8px 10px', background: '#fff', borderRadius: 6, border: '1px solid var(--sand-200)' }}>
-                  <div style={{ fontSize: 10, color: 'var(--sand-400)', fontWeight: 600 }}>ASSESSMENT</div>
-                  <div style={{ fontSize: 12, color: 'var(--sand-700)' }}>{item.note.assessment}</div>
-                </div>
-              )}
-              {item.note.plan && (
-                <div style={{ padding: '8px 10px', background: '#fff', borderRadius: 6, border: '1px solid var(--sand-200)' }}>
-                  <div style={{ fontSize: 10, color: 'var(--sand-400)', fontWeight: 600 }}>PLAN</div>
-                  <div style={{ fontSize: 12, color: 'var(--sand-700)' }}>{item.note.plan}</div>
-                </div>
-              )}
+          {/* Vitals from this visit */}
+          {item.vitals && (
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--sand-500)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8 }}>Vitals</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                {[
+                  ['BP', `${item.vitals.bpSys || '—'}/${item.vitals.bpDia || '—'}`],
+                  ['HR', item.vitals.hr ? `${item.vitals.hr} bpm` : '—'],
+                  ['Temp', item.vitals.temp ? `${item.vitals.temp}${item.vitals.tempUnit || '°F'}` : '—'],
+                  ['SpO₂', item.vitals.spo2 ? `${item.vitals.spo2}%` : '—'],
+                ].map(([l, v]) => (
+                  <div key={l} style={{ background: '#fff', padding: '6px 8px', borderRadius: 6, border: '1px solid var(--sand-200)' }}>
+                    <div style={{ fontSize: 10, color: 'var(--sand-400)' }}>{l}</div>
+                    <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--sand-900)' }}>{v}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
+
+          {/* Full SOAPP note, read-only */}
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--sand-500)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8 }}>Clinical Notes (Read Only)</div>
+            {item.vitals?.chiefComplaint && (
+              <div style={{ marginBottom: 8, padding: '8px 10px', background: 'var(--teal-50)', borderRadius: 6, border: '1px solid var(--teal-100)' }}>
+                <div style={{ fontSize: 10, color: 'var(--teal-600)', fontWeight: 600, letterSpacing: '0.06em' }}>CHIEF COMPLAINT</div>
+                <div style={{ fontSize: 12, color: 'var(--sand-800)', lineHeight: 1.5 }}>{item.vitals.chiefComplaint}</div>
+              </div>
+            )}
+            <SoappReadout note={item.note} compact />
+          </div>
         </div>
       </div>
 
@@ -1834,9 +2222,9 @@ function AddendumModal({ visit, role, onClose }) {
       }}>
         {/* Header */}
         <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--sand-200)', display: 'flex', alignItems: 'center', gap: 14, background: 'var(--sand-50)' }}>
-          <PhotoPlaceholder name={`${visit.patient.firstName} ${visit.patient.lastName}`} size={40} />
+          <PhotoPlaceholder name={patientName(visit.patient)} size={40} />
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 16, fontWeight: 600 }}>{visit.patient.firstName} {visit.patient.lastName}</div>
+            <div style={{ fontSize: 16, fontWeight: 600 }}>{patientName(visit.patient)}</div>
             <div style={{ fontSize: 12, color: 'var(--sand-500)' }}>
               Completed Visit · {formatTime()} &nbsp;·&nbsp;
               <span style={{ color: 'var(--sand-400)' }}>Read-only — addenda only</span>
@@ -1994,9 +2382,9 @@ function CompletedDashboard({ completed, role }) {
                   onMouseLeave={e => e.currentTarget.style.background = ''}>
                   <td style={{ padding: '12px 16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <PhotoPlaceholder name={`${c.patient.firstName} ${c.patient.lastName}`} size={32} />
+                      <PhotoPlaceholder name={patientName(c.patient)} size={32} />
                       <div>
-                        <div style={{ fontSize: 14, fontWeight: 500 }}>{c.patient.firstName} {c.patient.lastName}</div>
+                        <div style={{ fontSize: 14, fontWeight: 500 }}>{patientName(c.patient)}</div>
                         <div style={{ fontSize: 11, color: 'var(--sand-500)' }}>{calcAge(c.patient.dob)}y</div>
                       </div>
                     </div>
@@ -2125,10 +2513,10 @@ function CommandCenter({ careQueue, pharmacyQueue, completed, darkMode }) {
                     borderRadius: 8, padding: '10px 12px', transition: 'box-shadow 0.15s'
                   }}>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 5 }}>
-                      <PhotoPlaceholder name={`${item.patient.firstName} ${item.patient.lastName}`} size={28} />
+                      <PhotoPlaceholder name={patientName(item.patient)} size={28} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 13, fontWeight: 600, color: D ? '#E2EAF4' : 'var(--sand-900)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {item.patient.firstName} {item.patient.lastName}
+                          {patientName(item.patient)}
                         </div>
                         <div style={{ fontSize: 10, color: D ? '#5A7090' : 'var(--sand-500)' }}>
                           {calcAge(item.patient.dob)}y · {item.patient.gender}
@@ -2250,6 +2638,10 @@ function App() {
   const [activeCarePatient, setActiveCarePatient] = useState(null);
   const [activePharmacyPatient, setActivePharmacyPatient] = useState(null);
 
+  // Unsaved-work guard for sidebar navigation
+  const dirtyRef = useRef(false);
+  const [pendingNav, setPendingNav] = useState(null);
+
   // Tweaks
   const { tweaks, setTweak } = useTweaks(TWEAK_DEFAULTS);
   const darkMode = tweaks?.darkMode || false;
@@ -2258,6 +2650,16 @@ function App() {
   useEffect(() => {
     document.body.classList.toggle('dark-mode', darkMode);
   }, [darkMode]);
+
+  // Warm / cool palette
+  useEffect(() => {
+    document.body.classList.toggle('theme-cool', tweaks.theme === 'cool');
+  }, [tweaks.theme]);
+
+  // Accent colour drives every primary button, active state and highlight
+  useEffect(() => {
+    document.documentElement.style.setProperty('--accent', tweaks.accentColor || '#1E8A7D');
+  }, [tweaks.accentColor]);
 
   // ── TRIAGE FLOW ──
   const handleTriageSelect = (patient) => {
@@ -2298,13 +2700,14 @@ function App() {
     setActiveCarePatient(item);
   };
 
-  const handleProviderClose = (item, sendToPharmacy, data) => {
+  const handleProviderClose = (item, sendToPharmacy, data, vitals) => {
+    const merged = vitals ? { ...item, vitals } : item;
     setCareQueue(q => q.filter(x => x.id !== item.id));
     if (sendToPharmacy && data) {
-      const pharmItem = { ...item, ...data, provider: 'Dr. Chen' };
+      const pharmItem = { ...merged, ...data, provider: 'Dr. Chen' };
       setPharmacyQueue(q => [...q, pharmItem]);
     } else {
-      setCompleted(c => [...c, item]);
+      setCompleted(c => [...c, merged]);
     }
     setActiveCarePatient(null);
   };
@@ -2324,13 +2727,50 @@ function App() {
     setActivePharmacyPatient(null);
   };
 
+  // Leaving a screen abandons the encounter in progress — a half-entered
+  // vitals form or SOAPP note is discarded rather than following you around.
+  const clearActiveEncounters = () => {
+    dirtyRef.current = false;
+    setActiveTriagePatient(null);
+    setTriageStep('search');
+    setActiveCarePatient(null);
+    setActivePharmacyPatient(null);
+  };
+
+  // The open screen reports whether it holds unsaved input. Kept in a ref so a
+  // keystroke doesn't re-render the sidebar.
+  const setDirty = useCallback((value) => { dirtyRef.current = value; }, []);
+
+  // Runs `action` immediately, or parks it behind a confirmation when the
+  // current screen would lose work.
+  const guard = (action) => {
+    if (dirtyRef.current) setPendingNav(() => action);
+    else action();
+  };
+
+  const navigate = (view) => guard(() => {
+    clearActiveEncounters();
+    setActiveView(view);
+  });
+
+  const changeRole = (nextRole, defaultView) => guard(() => {
+    clearActiveEncounters();
+    setRole(nextRole);
+    setActiveView(defaultView);
+  });
+
   // Determine what to render
   const renderMain = () => {
+    // Command Center — available to every role
+    if (activeView === 'command') {
+      return <CommandCenter careQueue={careQueue} pharmacyQueue={pharmacyQueue} completed={completed} darkMode={darkMode} />;
+    }
+
     // TRIAGE
     if (role === 'Triage') {
-      if (triageStep === 'new') return <NewPatientForm onComplete={handleNewPatientComplete} />;
+      if (triageStep === 'new') return <NewPatientForm onComplete={handleNewPatientComplete} onDirtyChange={setDirty} />;
       if (triageStep === 'vitals' && activeTriagePatient) {
-        return <VitalsForm patient={activeTriagePatient} onComplete={handleCheckIn} />;
+        return <VitalsForm patient={activeTriagePatient} onComplete={handleCheckIn} onDirtyChange={setDirty} />;
       }
       if (activeView === 'checkins') {
         return (
@@ -2342,9 +2782,9 @@ function App() {
               careQueue.map((item, i) => (
                 <Card key={item.id} style={{ padding: '16px 20px', marginBottom: 10 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <PhotoPlaceholder name={`${item.patient.firstName} ${item.patient.lastName}`} size={40} />
+                    <PhotoPlaceholder name={patientName(item.patient)} size={40} />
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600 }}>{item.patient.firstName} {item.patient.lastName}</div>
+                      <div style={{ fontWeight: 600 }}>{patientName(item.patient)}</div>
                       <div style={{ fontSize: 13, color: 'var(--sand-500)' }}>{minutesAgo(item.checkInTime)}</div>
                     </div>
                     <Badge color="teal">In Care Queue</Badge>
@@ -2361,7 +2801,7 @@ function App() {
     // PROVIDER
     if (role === 'Provider') {
       if (activeCarePatient) {
-        return <SOAPPView item={activeCarePatient} onClose={(direct) => handleProviderClose(activeCarePatient, !direct, null)} onSendToPharmacy={handleSendToPharmacy} />;
+        return <SOAPPView item={activeCarePatient} onClose={(direct, vitals) => handleProviderClose(activeCarePatient, !direct, null, vitals)} onSendToPharmacy={handleSendToPharmacy} onDirtyChange={setDirty} />;
       }
       if (activeView === 'completed') return <CompletedDashboard completed={completed} role={role} />;
       return <CareQueue queue={careQueue} onAssume={handleAssumePatient} />;
@@ -2370,7 +2810,7 @@ function App() {
     // PHARMACY
     if (role === 'Pharmacy') {
       if (activePharmacyPatient) {
-        return <PharmacyFulfillment item={activePharmacyPatient} onClose={handlePharmacyClose} />;
+        return <PharmacyFulfillment item={activePharmacyPatient} onClose={handlePharmacyClose} onDirtyChange={setDirty} />;
       }
       if (activeView === 'completed') return <CompletedDashboard completed={completed} role={role} />;
       return <PharmacyView queue={pharmacyQueue} onAssume={handlePharmacyAssume} />;
@@ -2382,18 +2822,30 @@ function App() {
   };
 
   return (
+    <TweaksCtx.Provider value={{ tweaks, setTweak }}>
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--sand-100)' }}>
-      <Sidebar role={role} setRole={(r) => { setRole(r); setActiveCarePatient(null); setActivePharmacyPatient(null); setActiveTriagePatient(null); setTriageStep('search'); }}
-        activeView={activeView} setView={setActiveView} trip={trip} notifications={notifications}
+      <Sidebar role={role} setRole={changeRole}
+        activeView={activeView} setView={navigate} trip={trip} notifications={notifications}
         darkMode={darkMode} onToggleDark={() => setTweak('darkMode', !darkMode)} />
       <div style={{ flex: 1, overflow: 'auto' }}>
         {renderMain()}
       </div>
 
+      {pendingNav && (
+        <ConfirmDiscardModal
+          onCancel={() => setPendingNav(null)}
+          onDiscard={() => { const go = pendingNav; setPendingNav(null); go(); }} />
+      )}
+
       <TweaksPanel tweaks={tweaks} setTweak={setTweak}>
         <TweakSection title="Appearance">
           <TweakToggle id="darkMode" label="Dark Mode" />
+          <TweakRadio id="theme" label="Palette" options={[{ value: 'warm', label: 'Warm' }, { value: 'cool', label: 'Cool' }]} />
           <TweakRadio id="density" label="Density" options={[{ value: 'compact', label: 'Compact' }, { value: 'comfortable', label: 'Comfy' }, { value: 'spacious', label: 'Spacious' }]} />
+          <TweakColor id="accentColor" label="Accent" swatches={['#1E8A7D', '#2563EB', '#7C3AED', '#D97706', '#B91C1C']} />
+        </TweakSection>
+        <TweakSection title="Queues">
+          <TweakRadio id="queueStyle" label="Card Style" options={[{ value: 'compact', label: 'Compact' }, { value: 'hybrid', label: 'Hybrid' }, { value: 'detailed', label: 'Detailed' }]} />
         </TweakSection>
         <TweakSection title="Quick Demo">
           <TweakButton label="Add Patient to Care Queue" onClick={() => {
@@ -2424,12 +2876,12 @@ function App() {
         </TweakSection>
       </TweaksPanel>
     </div>
+    </TweaksCtx.Provider>
   );
 }
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(<App />);
-</script>
 </script>
 </body>
 </html>
