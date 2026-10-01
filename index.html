@@ -494,8 +494,9 @@ const SEED_PATIENTS = [
   {
     id: "P001", firstName: "Maria", lastName: "Santos", dob: "1978-03-12",
     gender: "Female", phone: "555-0142", email: "maria.santos@example.com",
-    location: "Clinic A", photo: null,
+    location: "Clinic A", photo: null, mothersName: "Elena Santos",
     allergies: ["Penicillin", "Sulfa drugs"],
+    medicalHistory: { hypertension: true },
     visits: [
       {
         id: "V001-old", date: "2024-11-15", provider: "Dr. Chen", pharmacist: "J. Rivera",
@@ -515,15 +516,17 @@ const SEED_PATIENTS = [
   {
     id: "P002", firstName: "Carlos", lastName: "Mendez", dob: "1965-07-22",
     gender: "Male", phone: "555-0287", email: "cmendez@example.com",
-    location: "Clinic A", photo: null,
+    location: "Clinic A", photo: null, mothersName: "",
     allergies: [],
+    medicalHistory: { diabetes: true, highCholesterol: true },
     visits: []
   },
   {
     id: "P003", firstName: "Ana", lastName: "Reyes", dob: "1990-01-08",
     gender: "Female", phone: "555-0399", email: "",
-    location: "Clinic B", photo: null,
+    location: "Clinic B", photo: null, mothersName: "",
     allergies: ["Aspirin", "NSAIDs"],
+    medicalHistory: {},
     visits: [
       {
         id: "V003-old", date: "2024-08-03", provider: "Dr. Patel", pharmacist: "S. Kim",
@@ -579,6 +582,149 @@ function minutesAgo(ts) {
 function patientName(p) {
   if (!p) return '';
   return [p.firstName, p.lastName, p.extensionName].filter(Boolean).join(' ');
+}
+
+// ─── TRIAGE ACUITY ──────────────────────────────────────────────────────────────
+// A standard 5-level acuity scale. Levels are mutually exclusive — a patient is
+// assigned exactly one — so selection behaves like a radio group even though it
+// is presented as a row of tappable chips.
+const TRIAGE_LEVELS = [
+  { level: 1, label: 'Resuscitation', color: '#DC2626',
+    tip: 'Condition: Immediate, life-threatening problem.\nExamples: Cardiac arrest, major trauma, severe respiratory distress, or active seizures.' },
+  { level: 2, label: 'Emergent', color: '#F97316',
+    tip: 'Condition: High-risk situation, confused, or in severe pain/distress.\nExamples: Heart attack, stroke, suspected head injury, or severe asthma.' },
+  { level: 3, label: 'Urgent', color: '#F59E0B',
+    tip: 'Condition: Stable vital signs, but needs multiple resources (like blood tests or X-rays) and quick attention.\nExamples: Moderate pain, deep cuts, or stable abdominal pain.' },
+  { level: 4, label: 'Less Urgent', color: '#84CC16',
+    tip: 'Condition: Stable, requires only one simple resource (like an X-ray or a urine test).\nExamples: Simple sprain, simple urinary tract infection, or small closed fracture.' },
+  { level: 5, label: 'Non-Urgent', color: '#16A34A',
+    tip: 'Condition: Most stable, requiring no or minimal resources.\nExamples: Cold symptoms, sore throat, or minor skin rashes.' },
+];
+const TRIAGE_LEVEL_BY_NUM = Object.fromEntries(TRIAGE_LEVELS.map(l => [l.level, l]));
+
+function TriageLevelPicker({ value, onChange }) {
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+      {TRIAGE_LEVELS.map(lvl => {
+        const active = value === lvl.level;
+        return (
+          <button key={lvl.level} type="button"
+            title={`Level ${lvl.level} – ${lvl.label}\n${lvl.tip}`}
+            onClick={() => onChange(lvl.level)}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              padding: '8px 14px', borderRadius: 'var(--radius-md)', cursor: 'pointer',
+              fontFamily: 'var(--font-body)', flex: '1 1 150px', minWidth: 0,
+              border: `1.5px solid ${active ? lvl.color : 'var(--sand-300)'}`,
+              background: active ? lvl.color : '#fff',
+              color: active ? '#fff' : 'var(--sand-700)',
+              fontSize: 13, fontWeight: active ? 600 : 500
+            }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: active ? '#fff' : lvl.color, flexShrink: 0 }} />
+            <span>{lvl.level} – {lvl.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// Compact colored marker so a triage level reads at a glance from a collapsed
+// queue row, without expanding the card.
+function TriageLevelBadge({ level }) {
+  const lvl = TRIAGE_LEVEL_BY_NUM[level];
+  if (!lvl) return null;
+  return (
+    <div title={`Level ${lvl.level} – ${lvl.label}`} style={{
+      width: 24, height: 24, borderRadius: '50%', background: lvl.color, color: '#fff',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: 12, fontWeight: 700, flexShrink: 0
+    }}>{lvl.level}</div>
+  );
+}
+
+// ─── MEDICAL HISTORY ────────────────────────────────────────────────────────────
+// Chronic-condition flags live on the patient record (not the visit), so they
+// carry forward and are visible on every future encounter.
+const MEDICAL_HISTORY_FIELDS = [
+  { key: 'hypertension', label: 'Hypertension' },
+  { key: 'diabetes', label: 'Diabetes' },
+  { key: 'arrhythmia', label: 'Arrhythmia' },
+  { key: 'heartAttack', label: 'Heart Attack' },
+  { key: 'highCholesterol', label: 'High Cholesterol' },
+  { key: 'surgery', label: 'Surgery' },
+];
+
+function CheckboxField({ id, label, checked, onChange, title }) {
+  return (
+    <div title={title} style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+      <input type="checkbox" id={id} checked={checked} onChange={e => onChange(e.target.checked)}
+        style={{ width: 16, height: 16, cursor: 'pointer', flexShrink: 0 }} />
+      <label htmlFor={id} style={{ fontSize: 13, color: 'var(--sand-700)', cursor: 'pointer' }}>{label}</label>
+    </div>
+  );
+}
+
+// Compact chips so chronic conditions are visible wherever a patient's card is
+// shown, without opening a separate history screen.
+function MedicalHistoryBadges({ medicalHistory }) {
+  const active = MEDICAL_HISTORY_FIELDS.filter(f => medicalHistory?.[f.key]);
+  if (active.length === 0) return null;
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+      {active.map(f => <Badge key={f.key} color="blue">{f.label}</Badge>)}
+    </div>
+  );
+}
+
+// ─── RESOURCES ──────────────────────────────────────────────────────────────────
+const RESOURCE_OPTIONS = [
+  'Ultrasound',
+  'Osteopathic Manipulative Treatment (OMT)',
+  'Electrocardiogram (ECG or EKG)',
+  'Pregnancy Test',
+  'Stress Test',
+  'H&H Blood Test (Hemoglobin and Hematocrit)',
+  'Urine Test',
+];
+
+// ─── BMI ────────────────────────────────────────────────────────────────────────
+function calcBMI(weight, weightUnit, height, heightUnit) {
+  const w = parseFloat(weight), h = parseFloat(height);
+  if (!w || !h || w <= 0 || h <= 0) return null;
+  const kg = weightUnit === 'lbs' ? w * 0.453592 : w;
+  const m = (heightUnit === 'in' ? h * 2.54 : h) / 100;
+  if (!(m > 0)) return null;
+  const bmi = kg / (m * m);
+  if (!isFinite(bmi) || bmi <= 0) return null;
+  const category = bmi < 18.5 ? 'Underweight' : bmi < 25 ? 'Normal' : bmi < 30 ? 'Overweight' : 'Obese';
+  return { value: Math.round(bmi * 10) / 10, category };
+}
+
+// ─── PATIENT ID ─────────────────────────────────────────────────────────────────
+// 32-character alphabet (a power of two) so `% length` carries no modulo bias,
+// excluding 0/O and 1/I to avoid characters that are easily misread aloud.
+const PATIENT_ID_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+
+function randomIdSegment(length) {
+  const bytes = new Uint32Array(length);
+  crypto.getRandomValues(bytes);
+  let out = '';
+  for (let i = 0; i < length; i++) out += PATIENT_ID_CHARS[bytes[i] % PATIENT_ID_CHARS.length];
+  return out;
+}
+
+// Generates PT-XXXX-XXXX using a cryptographically secure RNG, regenerating on
+// collision against the supplied set of IDs already in use. This app has no
+// backend, so this in-memory check stands in for a real unique DB constraint —
+// see PATIENT_ID note in the PR description.
+function generatePatientId(existingIds) {
+  const existing = existingIds instanceof Set ? existingIds : new Set(existingIds || []);
+  let id;
+  do {
+    id = `PT-${randomIdSegment(4)}-${randomIdSegment(4)}`;
+  } while (existing.has(id));
+  return id;
 }
 
 // ─── VIEWPORT ─────────────────────────────────────────────────────────────────
@@ -1272,10 +1418,10 @@ function PatientSearchCard({ patient, onSelect }) {
 }
 
 const NEW_PATIENT_INIT = {
-  firstName: '', lastName: '', extensionName: '', dob: '', gender: '', phone: '', email: '', location: 'Clinic A'
+  firstName: '', lastName: '', extensionName: '', dob: '', gender: '', phone: '', email: '', location: 'Clinic A', mothersName: ''
 };
 
-function NewPatientForm({ onComplete, onDirtyChange }) {
+function NewPatientForm({ onComplete, onDirtyChange, existingPatientIds }) {
   const [form, setForm] = useState(NEW_PATIENT_INIT);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -1290,8 +1436,8 @@ function NewPatientForm({ onComplete, onDirtyChange }) {
       return;
     }
     onComplete({
-      id: 'P' + Date.now(),
-      ...form, photo: null, allergies: [], visits: []
+      id: generatePatientId(existingPatientIds),
+      ...form, photo: null, allergies: [], medicalHistory: {}, visits: []
     });
   };
 
@@ -1320,6 +1466,7 @@ function NewPatientForm({ onComplete, onDirtyChange }) {
           <Input label="Phone Number" value={form.phone} onChange={v => set('phone', v)} hint="Optional" />
           <Input label="Email" value={form.email} onChange={v => set('email', v)} hint="For visit summary" />
           <Input label="Clinic Site" value={form.location} onChange={v => set('location', v)} required />
+          <Input label="Mother's Name" value={form.mothersName} onChange={v => set('mothersName', v)} />
         </div>
       </Card>
 
@@ -1390,13 +1537,28 @@ function VitalsForm({ patient, onComplete, onDirtyChange }) {
   const [tempUnit, setTempUnit] = useState('°F');
   const [weightUnit, setWeightUnit] = useState('kg');
   const [heightUnit, setHeightUnit] = useState('cm');
+  const [triageLevel, setTriageLevel] = useState(null);
+  const [pregnant, setPregnant] = useState(false);
+  const [lastPeriodDate, setLastPeriodDate] = useState('');
+  const [historyNotes, setHistoryNotes] = useState('');
+  const [medications, setMedications] = useState('');
+  const [familySocialHistory, setFamilySocialHistory] = useState('');
+  const [medicalHistory, setMedicalHistory] = useState(patient.medicalHistory || {});
 
   const setV = (k, v) => setVitals(vit => ({ ...vit, [k]: v }));
+  const bmi = calcBMI(vitals.weight, weightUnit, vitals.height, heightUnit);
 
   useReportDirty(
     Object.values(vitals).some(v => v && String(v).trim()) ||
     allergies !== patient.allergies.join(', ') ||
-    allergyConfirmed,
+    allergyConfirmed ||
+    triageLevel != null ||
+    pregnant ||
+    !!lastPeriodDate ||
+    !!historyNotes.trim() ||
+    !!medications.trim() ||
+    !!familySocialHistory.trim() ||
+    JSON.stringify(medicalHistory) !== JSON.stringify(patient.medicalHistory || {}),
     onDirtyChange
   );
 
@@ -1407,14 +1569,22 @@ function VitalsForm({ patient, onComplete, onDirtyChange }) {
 
   const submit = () => {
     if (!vitals.chiefComplaint) { alert('Chief complaint is required.'); return; }
+    if (!triageLevel) { alert('Please select a triage level before check-in.'); return; }
     if (isReturning && !allergyConfirmed && patient.allergies.length > 0) {
       alert('Please confirm allergies before check-in.'); return;
     }
     onComplete({
-      vitals: { ...vitals, tempUnit, weightUnit, heightUnit },
+      vitals: { ...vitals, tempUnit, weightUnit, heightUnit, bmi: bmi ? bmi.value : null },
       allergies: allergies.split(',').map(a => a.trim()).filter(Boolean),
       chiefComplaint: vitals.chiefComplaint,
-      checkInTime: Date.now()
+      checkInTime: Date.now(),
+      triageLevel,
+      pregnant: patient.gender === 'Female' ? pregnant : undefined,
+      lastPeriodDate: patient.gender === 'Female' ? lastPeriodDate : undefined,
+      historyNotes,
+      medications,
+      familySocialHistory,
+      medicalHistory,
     });
   };
 
@@ -1495,6 +1665,21 @@ function VitalsForm({ patient, onComplete, onDirtyChange }) {
             unit={heightUnit} unitOptions={['cm', 'in']} onUnitChange={setHeightUnit} />
           <Input label="SpO₂" value={vitals.spo2} onChange={v => setV('spo2', v)} placeholder="99" unit="%" />
         </div>
+        {bmi && (
+          <div style={{ marginTop: 14, padding: '10px 14px', background: 'var(--sand-50)', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--sand-500)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>BMI</span>
+            <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--sand-900)' }}>{bmi.value}</span>
+            <Badge color={bmi.category === 'Normal' ? 'teal' : bmi.category === 'Underweight' ? 'blue' : bmi.category === 'Overweight' ? 'amber' : 'red'}>{bmi.category}</Badge>
+            <span style={{ fontSize: 11, color: 'var(--sand-400)', marginLeft: 'auto' }}>Calculated automatically from weight &amp; height</span>
+          </div>
+        )}
+      </Card>
+
+      <Card style={{ padding: '24px', marginBottom: 16 }}>
+        <div style={{ marginBottom: 12, fontSize: 13, fontWeight: 600, color: 'var(--sand-700)' }}>
+          Triage Level <span style={{ color: 'var(--red-500)' }}>*</span>
+        </div>
+        <TriageLevelPicker value={triageLevel} onChange={setTriageLevel} />
       </Card>
 
       <Card style={{ padding: '24px', marginBottom: 16 }}>
@@ -1514,6 +1699,38 @@ function VitalsForm({ patient, onComplete, onDirtyChange }) {
           )}
         </div>
       </Card>
+
+      <Card style={{ padding: '24px', marginBottom: 16 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--sand-800)', marginBottom: 4 }}>Patient History</h3>
+        <p style={{ fontSize: 12, color: 'var(--sand-500)', marginBottom: 14 }}>Chronic conditions stay on the patient's record for future visits.</p>
+        <Textarea label="Past Medical History" value={historyNotes} onChange={setHistoryNotes}
+          placeholder="Any past history of the patient's health..." rows={3} />
+        <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
+          {MEDICAL_HISTORY_FIELDS.map(f => (
+            <CheckboxField key={f.key} id={`hist-${f.key}`} label={f.label}
+              checked={!!medicalHistory[f.key]}
+              onChange={v => setMedicalHistory(m => ({ ...m, [f.key]: v }))} />
+          ))}
+        </div>
+        <div style={{ marginTop: 14 }}>
+          <Textarea label="Current Medications" value={medications} onChange={setMedications}
+            placeholder="What medications are they currently on..." rows={2} />
+        </div>
+        <div style={{ marginTop: 14 }}>
+          <Textarea label="Family / Social History" value={familySocialHistory} onChange={setFamilySocialHistory}
+            placeholder="Relevant family or social history..." rows={2} />
+        </div>
+      </Card>
+
+      {patient.gender === 'Female' && (
+        <Card style={{ padding: '24px', marginBottom: 16 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--sand-800)', marginBottom: 14 }}>Maternity</h3>
+          <CheckboxField id="pregnant" label="Is patient currently pregnant?" checked={pregnant} onChange={setPregnant} />
+          <div style={{ marginTop: 14, maxWidth: 220 }}>
+            <Input label="Date of Last Period" type="date" value={lastPeriodDate} onChange={setLastPeriodDate} />
+          </div>
+        </Card>
+      )}
 
       <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
         <Button variant="secondary">Cancel</Button>
@@ -1586,6 +1803,7 @@ function QueueCard({ item, index, expanded, onToggle, onAssume, actionLabel, sho
         <div style={{ width: 28, height: 28, borderRadius: '50%', background: index === 0 ? 'var(--accent)' : 'var(--sand-200)',
           color: index === 0 ? '#fff' : 'var(--sand-600)', display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{index + 1}</div>
+        {item.triageLevel && <TriageLevelBadge level={item.triageLevel} />}
         <PhotoPlaceholder name={patientName(item.patient)} size={44} />
         <div style={{ flex: '1 1 150px', minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3, flexWrap: 'wrap' }}>
@@ -1664,15 +1882,18 @@ function SOAPPView({ item, onClose, onSendToPharmacy, onDirtyChange }) {
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [vitals, setVitals] = useState(item.vitals || {});
   const [vitalsDraft, setVitalsDraft] = useState(null);
+  const [resourcesOrdered, setResourcesOrdered] = useState(item.resourcesOrdered || []);
   const isMobile = useIsMobile(TWO_PANE_BREAKPOINT);
   const [chartOpen, setChartOpen] = useState(false);
 
   const setN = (k, v) => setNote(n => ({ ...n, [k]: v }));
+  const toggleResource = (name) => setResourcesOrdered(r => r.includes(name) ? r.filter(x => x !== name) : [...r, name]);
 
   useReportDirty(
     Object.values(note).some(v => v.trim()) ||
     adminMeds.length > 0 ||
     rxRequests.length > 0 ||
+    resourcesOrdered.length > 0 ||
     !!vitalsDraft ||
     JSON.stringify(vitals) !== JSON.stringify(item.vitals || {}),
     onDirtyChange
@@ -1694,7 +1915,7 @@ function SOAPPView({ item, onClose, onSendToPharmacy, onDirtyChange }) {
 
   const handleSendToPharmacy = () => {
     if (rxRequests.length === 0) { alert('Add at least one pharmacy request, or use "Close Visit Directly".'); return; }
-    onSendToPharmacy({ note, adminMeds, rxRequests, vitals });
+    onSendToPharmacy({ note, adminMeds, rxRequests, vitals, resourcesOrdered });
   };
 
   const soappSections = [
@@ -1723,12 +1944,17 @@ function SOAPPView({ item, onClose, onSendToPharmacy, onDirtyChange }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
             <PhotoPlaceholder name={patientName(item.patient)} size={52} />
             <div>
-              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--sand-900)' }}>{patientName(item.patient)}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--sand-900)' }}>{patientName(item.patient)}</span>
+                {item.pregnant && <Badge color="blue">🤰 Pregnant</Badge>}
+              </div>
               <div style={{ fontSize: 12, color: 'var(--sand-600)' }}>{calcAge(item.patient.dob)}y · {item.patient.gender}</div>
               <div style={{ fontSize: 11, color: 'var(--sand-500)' }}>ID: {item.patient.id}</div>
+              {item.patient.mothersName && <div style={{ fontSize: 11, color: 'var(--sand-500)' }}>Mother: {item.patient.mothersName}</div>}
             </div>
           </div>
           <AllergyBanner allergies={item.patient.allergies} />
+          <MedicalHistoryBadges medicalHistory={item.patient.medicalHistory} />
         </div>
 
         {/* Current vitals — provider-editable */}
@@ -1793,6 +2019,30 @@ function SOAPPView({ item, onClose, onSendToPharmacy, onDirtyChange }) {
             <div style={{ marginTop: 10, padding: '8px 10px', background: 'var(--teal-50)', borderRadius: 6, border: '1px solid var(--teal-100)' }}>
               <div style={{ fontSize: 10, color: 'var(--teal-600)', fontWeight: 600, marginBottom: 2 }}>CHIEF COMPLAINT</div>
               <div style={{ fontSize: 12, color: 'var(--sand-800)' }}>{vitals.chiefComplaint}</div>
+            </div>
+          )}
+          {item.historyNotes && (
+            <div style={{ marginTop: 10, padding: '8px 10px', background: '#fff', borderRadius: 6, border: '1px solid var(--sand-200)' }}>
+              <div style={{ fontSize: 10, color: 'var(--sand-400)', fontWeight: 600 }}>PATIENT HISTORY</div>
+              <div style={{ fontSize: 12, color: 'var(--sand-700)' }}>{item.historyNotes}</div>
+            </div>
+          )}
+          {item.medications && (
+            <div style={{ marginTop: 10, padding: '8px 10px', background: '#fff', borderRadius: 6, border: '1px solid var(--sand-200)' }}>
+              <div style={{ fontSize: 10, color: 'var(--sand-400)', fontWeight: 600 }}>CURRENT MEDICATIONS</div>
+              <div style={{ fontSize: 12, color: 'var(--sand-700)' }}>{item.medications}</div>
+            </div>
+          )}
+          {item.familySocialHistory && (
+            <div style={{ marginTop: 10, padding: '8px 10px', background: '#fff', borderRadius: 6, border: '1px solid var(--sand-200)' }}>
+              <div style={{ fontSize: 10, color: 'var(--sand-400)', fontWeight: 600 }}>FAMILY / SOCIAL HISTORY</div>
+              <div style={{ fontSize: 12, color: 'var(--sand-700)' }}>{item.familySocialHistory}</div>
+            </div>
+          )}
+          {item.lastPeriodDate && (
+            <div style={{ marginTop: 10, padding: '8px 10px', background: '#fff', borderRadius: 6, border: '1px solid var(--sand-200)' }}>
+              <div style={{ fontSize: 10, color: 'var(--sand-400)', fontWeight: 600 }}>DATE OF LAST PERIOD</div>
+              <div style={{ fontSize: 12, color: 'var(--sand-700)' }}>{item.lastPeriodDate}</div>
             </div>
           )}
         </div>
@@ -1896,6 +2146,17 @@ function SOAPPView({ item, onClose, onSendToPharmacy, onDirtyChange }) {
                   ))}
                 </div>
               )}
+
+              <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid var(--sand-200)' }}>
+                <SectionHeader title="Resources Ordered" count={resourcesOrdered.length} />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+                  {RESOURCE_OPTIONS.map(opt => (
+                    <CheckboxField key={opt} id={`res-${opt}`} label={opt}
+                      checked={resourcesOrdered.includes(opt)}
+                      onChange={() => toggleResource(opt)} />
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
@@ -2033,11 +2294,16 @@ function PharmacyFulfillment({ item, onClose, onDirtyChange }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
             <PhotoPlaceholder name={patientName(item.patient)} size={52} />
             <div>
-              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--sand-900)' }}>{patientName(item.patient)}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--sand-900)' }}>{patientName(item.patient)}</span>
+                {item.pregnant && <Badge color="blue">🤰 Pregnant</Badge>}
+              </div>
               <div style={{ fontSize: 12, color: 'var(--sand-600)' }}>{calcAge(item.patient.dob)}y · {item.patient.gender}</div>
               <div style={{ fontSize: 11, color: 'var(--sand-500)' }}>Provider: {item.provider}</div>
+              {item.patient.mothersName && <div style={{ fontSize: 11, color: 'var(--sand-500)' }}>Mother: {item.patient.mothersName}</div>}
             </div>
           </div>
+          <MedicalHistoryBadges medicalHistory={item.patient.medicalHistory} />
 
           {/* PROMINENT allergy warning */}
           {item.patient.allergies.length > 0 ? (
@@ -2860,14 +3126,28 @@ function App() {
   };
 
   const handleCheckIn = (vitalsData) => {
+    // Chronic-condition checkboxes belong to the patient record, not just this
+    // visit, so they carry forward and are pre-checked on the next encounter.
+    const patientForQueue = vitalsData.medicalHistory
+      ? { ...activeTriagePatient, medicalHistory: vitalsData.medicalHistory }
+      : activeTriagePatient;
+    if (vitalsData.medicalHistory) {
+      setPatients(ps => ps.map(p => p.id === activeTriagePatient.id ? { ...p, medicalHistory: vitalsData.medicalHistory } : p));
+    }
     const queueItem = {
       id: 'Q' + Date.now(),
-      patient: activeTriagePatient,
+      patient: patientForQueue,
       vitals: vitalsData.vitals,
       checkInTime: Date.now(),
       triageInitials: 'JR',
       warnings: [],
       rxRequests: [],
+      triageLevel: vitalsData.triageLevel,
+      pregnant: vitalsData.pregnant,
+      lastPeriodDate: vitalsData.lastPeriodDate,
+      historyNotes: vitalsData.historyNotes,
+      medications: vitalsData.medications,
+      familySocialHistory: vitalsData.familySocialHistory,
     };
     if (vitalsData.vitals.spo2 && parseFloat(vitalsData.vitals.spo2) < 90) queueItem.warnings.push('Low SpO2');
     if (vitalsData.vitals.hr && parseInt(vitalsData.vitals.hr) > 120) queueItem.warnings.push('Tachycardia');
@@ -2950,7 +3230,7 @@ function App() {
 
     // TRIAGE
     if (role === 'Triage') {
-      if (triageStep === 'new') return <NewPatientForm onComplete={handleNewPatientComplete} onDirtyChange={setDirty} />;
+      if (triageStep === 'new') return <NewPatientForm onComplete={handleNewPatientComplete} onDirtyChange={setDirty} existingPatientIds={patients.map(p => p.id)} />;
       if (triageStep === 'vitals' && activeTriagePatient) {
         return <VitalsForm patient={activeTriagePatient} onComplete={handleCheckIn} onDirtyChange={setDirty} />;
       }
