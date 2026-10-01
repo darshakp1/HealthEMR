@@ -590,38 +590,57 @@ function patientName(p) {
 // is presented as a row of tappable chips.
 const TRIAGE_LEVELS = [
   { level: 1, label: 'Resuscitation', color: '#DC2626',
-    tip: 'Condition: Immediate, life-threatening problem.\nExamples: Cardiac arrest, major trauma, severe respiratory distress, or active seizures.' },
+    condition: 'Immediate, life-threatening problem.',
+    examples: 'Cardiac arrest, major trauma, severe respiratory distress, or active seizures.' },
   { level: 2, label: 'Emergent', color: '#F97316',
-    tip: 'Condition: High-risk situation, confused, or in severe pain/distress.\nExamples: Heart attack, stroke, suspected head injury, or severe asthma.' },
+    condition: 'High-risk situation, confused, or in severe pain/distress.',
+    examples: 'Heart attack, stroke, suspected head injury, or severe asthma.' },
   { level: 3, label: 'Urgent', color: '#F59E0B',
-    tip: 'Condition: Stable vital signs, but needs multiple resources (like blood tests or X-rays) and quick attention.\nExamples: Moderate pain, deep cuts, or stable abdominal pain.' },
+    condition: 'Stable vital signs, but needs multiple resources (like blood tests or X-rays) and quick attention.',
+    examples: 'Moderate pain, deep cuts, or stable abdominal pain.' },
   { level: 4, label: 'Less Urgent', color: '#84CC16',
-    tip: 'Condition: Stable, requires only one simple resource (like an X-ray or a urine test).\nExamples: Simple sprain, simple urinary tract infection, or small closed fracture.' },
+    condition: 'Stable, requires only one simple resource (like an X-ray or a urine test).',
+    examples: 'Simple sprain, simple urinary tract infection, or small closed fracture.' },
   { level: 5, label: 'Non-Urgent', color: '#16A34A',
-    tip: 'Condition: Most stable, requiring no or minimal resources.\nExamples: Cold symptoms, sore throat, or minor skin rashes.' },
+    condition: 'Most stable, requiring no or minimal resources.',
+    examples: 'Cold symptoms, sore throat, or minor skin rashes.' },
 ];
 const TRIAGE_LEVEL_BY_NUM = Object.fromEntries(TRIAGE_LEVELS.map(l => [l.level, l]));
 
+// Stacked, full-width option cards rather than compact chips — the condition
+// and examples text is shown inline for every option (not just on hover), since
+// hover tooltips don't work on the touch devices this app also has to support.
 function TriageLevelPicker({ value, onChange }) {
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {TRIAGE_LEVELS.map(lvl => {
         const active = value === lvl.level;
         return (
           <button key={lvl.level} type="button"
-            title={`Level ${lvl.level} – ${lvl.label}\n${lvl.tip}`}
+            title={`Level ${lvl.level} – ${lvl.label}\nCondition: ${lvl.condition}\nExamples: ${lvl.examples}`}
             onClick={() => onChange(lvl.level)}
             style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              padding: '8px 14px', borderRadius: 'var(--radius-md)', cursor: 'pointer',
-              fontFamily: 'var(--font-body)', flex: '1 1 150px', minWidth: 0,
+              display: 'flex', alignItems: 'flex-start', gap: 10, textAlign: 'left',
+              padding: '10px 14px', borderRadius: 'var(--radius-md)', cursor: 'pointer',
+              fontFamily: 'var(--font-body)', width: '100%',
               border: `1.5px solid ${active ? lvl.color : 'var(--sand-300)'}`,
               background: active ? lvl.color : '#fff',
-              color: active ? '#fff' : 'var(--sand-700)',
-              fontSize: 13, fontWeight: active ? 600 : 500
             }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: active ? '#fff' : lvl.color, flexShrink: 0 }} />
-            <span>{lvl.level} – {lvl.label}</span>
+            <span style={{
+              width: 10, height: 10, borderRadius: '50%', marginTop: 4, flexShrink: 0,
+              background: active ? '#fff' : lvl.color
+            }} />
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: active ? '#fff' : 'var(--sand-800)', marginBottom: 3 }}>
+                {lvl.level} – {lvl.label}
+              </div>
+              <div style={{ fontSize: 12, lineHeight: 1.45, color: active ? 'rgba(255,255,255,0.92)' : 'var(--sand-600)' }}>
+                <strong>Condition:</strong> {lvl.condition}
+              </div>
+              <div style={{ fontSize: 12, lineHeight: 1.45, color: active ? 'rgba(255,255,255,0.85)' : 'var(--sand-500)' }}>
+                <strong>Examples:</strong> {lvl.examples}
+              </div>
+            </div>
           </button>
         );
       })}
@@ -1676,13 +1695,6 @@ function VitalsForm({ patient, onComplete, onDirtyChange }) {
       </Card>
 
       <Card style={{ padding: '24px', marginBottom: 16 }}>
-        <div style={{ marginBottom: 12, fontSize: 13, fontWeight: 600, color: 'var(--sand-700)' }}>
-          Triage Level <span style={{ color: 'var(--red-500)' }}>*</span>
-        </div>
-        <TriageLevelPicker value={triageLevel} onChange={setTriageLevel} />
-      </Card>
-
-      <Card style={{ padding: '24px', marginBottom: 16 }}>
         <Textarea label="Chief Complaint" value={vitals.chiefComplaint} onChange={v => setV('chiefComplaint', v)}
           placeholder="Patient's primary reason for visit..." rows={3} required />
         <div style={{ marginTop: 14 }}>
@@ -1731,6 +1743,13 @@ function VitalsForm({ patient, onComplete, onDirtyChange }) {
           </div>
         </Card>
       )}
+
+      <Card style={{ padding: '24px', marginBottom: 16 }}>
+        <div style={{ marginBottom: 12, fontSize: 13, fontWeight: 600, color: 'var(--sand-700)' }}>
+          Triage Level <span style={{ color: 'var(--red-500)' }}>*</span>
+        </div>
+        <TriageLevelPicker value={triageLevel} onChange={setTriageLevel} />
+      </Card>
 
       <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
         <Button variant="secondary">Cancel</Button>
