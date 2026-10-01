@@ -1901,18 +1901,32 @@ function SOAPPView({ item, onClose, onSendToPharmacy, onDirtyChange }) {
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [vitals, setVitals] = useState(item.vitals || {});
   const [vitalsDraft, setVitalsDraft] = useState(null);
-  const [resourcesOrdered, setResourcesOrdered] = useState(item.resourcesOrdered || []);
+  // "Other: <text>" entries are split out of the plain checkbox list so the
+  // free-text field has its own checked/typed state, same as every other
+  // checkbox here — re-opening a visit that already has one reconstructs both.
+  const initialOtherResource = (item.resourcesOrdered || []).find(r => r.startsWith('Other: ') || r === 'Other');
+  const [resourcesOrdered, setResourcesOrdered] = useState(
+    (item.resourcesOrdered || []).filter(r => r !== initialOtherResource)
+  );
+  const [otherResourceChecked, setOtherResourceChecked] = useState(!!initialOtherResource);
+  const [otherResourceText, setOtherResourceText] = useState(
+    initialOtherResource && initialOtherResource.startsWith('Other: ') ? initialOtherResource.slice('Other: '.length) : ''
+  );
   const isMobile = useIsMobile(TWO_PANE_BREAKPOINT);
   const [chartOpen, setChartOpen] = useState(false);
 
   const setN = (k, v) => setNote(n => ({ ...n, [k]: v }));
   const toggleResource = (name) => setResourcesOrdered(r => r.includes(name) ? r.filter(x => x !== name) : [...r, name]);
+  const allResourcesOrdered = otherResourceChecked
+    ? [...resourcesOrdered, otherResourceText.trim() ? `Other: ${otherResourceText.trim()}` : 'Other']
+    : resourcesOrdered;
 
   useReportDirty(
     Object.values(note).some(v => v.trim()) ||
     adminMeds.length > 0 ||
     rxRequests.length > 0 ||
     resourcesOrdered.length > 0 ||
+    otherResourceChecked ||
     !!vitalsDraft ||
     JSON.stringify(vitals) !== JSON.stringify(item.vitals || {}),
     onDirtyChange
@@ -1934,7 +1948,7 @@ function SOAPPView({ item, onClose, onSendToPharmacy, onDirtyChange }) {
 
   const handleSendToPharmacy = () => {
     if (rxRequests.length === 0) { alert('Add at least one pharmacy request, or use "Close Visit Directly".'); return; }
-    onSendToPharmacy({ note, adminMeds, rxRequests, vitals, resourcesOrdered });
+    onSendToPharmacy({ note, adminMeds, rxRequests, vitals, resourcesOrdered: allResourcesOrdered });
   };
 
   const soappSections = [
@@ -2167,14 +2181,23 @@ function SOAPPView({ item, onClose, onSendToPharmacy, onDirtyChange }) {
               )}
 
               <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid var(--sand-200)' }}>
-                <SectionHeader title="Resources Ordered" count={resourcesOrdered.length} />
+                <SectionHeader title="Resources Ordered" count={allResourcesOrdered.length} />
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
                   {RESOURCE_OPTIONS.map(opt => (
                     <CheckboxField key={opt} id={`res-${opt}`} label={opt}
                       checked={resourcesOrdered.includes(opt)}
                       onChange={() => toggleResource(opt)} />
                   ))}
+                  <CheckboxField id="res-other" label="Other"
+                    checked={otherResourceChecked}
+                    onChange={(v) => { setOtherResourceChecked(v); if (!v) setOtherResourceText(''); }} />
                 </div>
+                {otherResourceChecked && (
+                  <div className="animate-in" style={{ marginTop: 10 }}>
+                    <Input label="Other resource" value={otherResourceText} onChange={setOtherResourceText}
+                      placeholder="Describe the resource ordered..." />
+                  </div>
+                )}
               </div>
             </div>
           )}
